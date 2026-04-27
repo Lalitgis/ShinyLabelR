@@ -134,6 +134,15 @@ sl_server <- function(db_path = "shinylabel.db") {
 
       withProgress(message = "Loading images…", value = 0, {
         for (i in seq_len(nrow(files))) {
+          # Warn if image is very large — will load slowly via base64
+          file_mb <- file.info(files$datapath[i])$size / 1024^2
+          if (file_mb > 20) {
+            showNotification(
+              paste0(files$name[i], " is ", round(file_mb, 1),
+                     "MB — large images may load slowly."),
+              type = "warning", duration = 6)
+          }
+
           info <- sl_image_info(files$datapath[i])
           if (info$width == 0L) next
           dest <- file.path(dest_d, files$name[i])
