@@ -1,3 +1,7 @@
+# Null-coalescing operator — defined here so it's available to all R files
+# regardless of source() order (critical when used as a package).
+`%||%` <- function(a, b) if (!is.null(a) && length(a) > 0L && !is.na(a[1])) a else b
+
 #' Initialize the ShinyLabel SQLite database
 #'
 #' Creates all required tables and enables WAL mode for concurrent team access.
