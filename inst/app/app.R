@@ -9,13 +9,19 @@ on_shinyapps <- nzchar(Sys.getenv("SHINYAPPS_TOKEN")) ||
                 nzchar(Sys.getenv("SHINY_HOST"))
 
 # ── Resolve app directory ──────────────────────────────────────────────────
-app_dir <- tryCatch(
-  normalizePath(dirname(sys.frame(1)$ofile), mustWork = FALSE),
-  error = function(e) NULL
-)
-if (is.null(app_dir) || !nzchar(app_dir)) {
-  app_dir <- normalizePath(getwd(), mustWork = TRUE)
-}
+# BUG FIX: sys.frame(1)$ofile fails when the file is run inside a package
+# or via shiny::runApp("path") because the frame chain differs.
+# The correct approach is to use the __file__ equivalent in R.
+app_dir <- tryCatch({
+  # Works when source()'d or run as a script
+  d <- normalizePath(dirname(sys.frame(1)$ofile), mustWork = FALSE)
+  if (!nzchar(d) || d == ".") stop("empty")
+  d
+}, error = function(e) {
+  # Works when launched via shiny::runApp("dir") or as a package
+  tryCatch(normalizePath(getwd(), mustWork = TRUE),
+           error = function(e2) ".")
+})
 cat("[ShinyLabel] Running from:", app_dir, "\n")
 cat("[ShinyLabel] On shinyapps.io:", on_shinyapps, "\n")
 
