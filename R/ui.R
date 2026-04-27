@@ -11,13 +11,13 @@ sl_ui <- function() {
       tags$link(rel = "stylesheet", href = "css/style.css"),
       tags$script(src = "js/canvas.js"),
       tags$script(src = "js/shiny_handlers.js"),
-      tags$title("ShinyLabel — R Annotation Tool")
+      tags$title("ShinyLabelR — R Annotation Tool")
     ),
 
     # ── Login Screen ──────────────────────────────────────────────────────────
     div(id = "login-screen",
       div(class = "login-card",
-        div(class = "login-logo", "ShinyLabel v0.1"),
+        div(class = "login-logo", "ShinyLabelR v0.1"),
         h1(class = "login-title", "Welcome"),
         p(class = "login-subtitle", "R-native YOLO annotation tool"),
 
@@ -55,7 +55,7 @@ sl_ui <- function() {
           # Brand
           div(class = "sl-navbar-brand",
             div(class = "sl-navbar-logo", "SL"),
-            span(class = "sl-navbar-title", "ShinyLabel")
+            span(class = "sl-navbar-title", "ShinyLabelR")
           ),
 
           # Center tab navigation (in navbar)
