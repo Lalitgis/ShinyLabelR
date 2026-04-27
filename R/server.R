@@ -372,10 +372,17 @@ sl_server <- function(db_path = "shinylabel.db") {
     # which triggers the "Save As" dialog on all browsers.
     # ════════════════════════════════════════════════════════════════════════
 
+    # BUG FIX: exports_dir and addResourcePath are set once at app level in app.R.
+    # Calling addResourcePath() per-session causes Shiny warnings and a potential
+    # race in multi-user setups. We derive exports_dir from app_dir here only for
+    # path resolution — no addResourcePath() call.
     on_cloud <- nzchar(Sys.getenv("SHINYAPPS_TOKEN")) || nzchar(Sys.getenv("SHINY_HOST"))
-    exports_dir <- if (on_cloud) file.path(tempdir(), "sl_exports") else file.path(app_dir, "www", "exports")
+    exports_dir <- if (on_cloud) {
+      file.path(tempdir(), "sl_exports")
+    } else {
+      file.path(app_dir, "www", "exports")
+    }
     dir.create(exports_dir, showWarnings = FALSE, recursive = TRUE)
-    shiny::addResourcePath("exports", exports_dir)
 
     # Store the built zip/json paths so downloadHandler can serve them
     yolo_zip_path <- reactiveVal(NULL)
@@ -796,6 +803,3 @@ sl_server <- function(db_path = "shinylabel.db") {
 
   } # end server function
 }
-
-# Null-coalescing
-`%||%` <- function(a, b) if (!is.null(a) && length(a) > 0L && !is.na(a[1])) a else b
