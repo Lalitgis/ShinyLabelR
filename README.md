@@ -4,6 +4,9 @@
 
 Use `shinylabelR` to read, write, and export ShinyLabel annotation databases 
 directly from R scripts — no browser required.
+<p align="center">
+  <img src="man/figure/logo.svg" width="180"/>
+</p>
 
 ## Installation
 
