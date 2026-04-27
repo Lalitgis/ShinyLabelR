@@ -17,17 +17,26 @@ sl_ui <- function() {
     # ── Login Screen ──────────────────────────────────────────────────────────
     div(id = "login-screen",
       div(class = "login-card",
-        div(class = "login-logo", "ShinyLabelR v0.1"),
-        h1(class = "login-title", "Welcome"),
-        p(class = "login-subtitle", "R-native YOLO annotation tool"),
 
-        div(style = "text-align:left; margin-bottom:16px;",
-          tags$label("Your name", class = "sl-form-label"),
-          textInput("login_name", NULL, placeholder = "e.g. alice", width = "100%")
+        # Logo
+        div(class = "login-logo",
+          div(class = "login-logo-mark", "SL"),
+          span("ShinyLabelR")
         ),
 
-        div(style = "display:flex; align-items:center; gap:10px; margin-bottom:22px;",
-          span(class = "sl-form-label", style = "margin:0; flex-shrink:0;", "Theme:"),
+        h1(class = "login-title", "Start Annotating"),
+        p(class = "login-subtitle",
+          "R-native image labeling for YOLO. No Python, no install."),
+
+        div(class = "login-field",
+          tags$label("Your name", class = "sl-form-label"),
+          textInput("login_name", NULL,
+                    placeholder = "e.g. alice",
+                    width = "100%")
+        ),
+
+        div(style = "display:flex; align-items:center; gap:10px; margin-bottom:24px;",
+          span(class = "sl-form-label", style = "margin:0; flex-shrink:0;", "Appearance"),
           tags$label(class = "sl-toggle-wrap",
             tags$input(type = "checkbox", id = "theme_toggle",
                        onchange = "toggleTheme(this)"),
@@ -36,13 +45,14 @@ sl_ui <- function() {
               span(class = "sl-toggle-icon", "☀️")
             )
           ),
-          span(id = "theme_label", style = "font-size:13px; color:var(--text-muted);",
+          span(id = "theme_label",
+               style = "font-size:12px; color:var(--text-muted);",
                "Dark mode")
         ),
 
-        actionButton("btn_login", "Start Annotating →",
+        actionButton("btn_login", "Continue →",
                      class = "sl-btn sl-btn-primary",
-                     style = "width:100%; height:46px; font-size:15px;")
+                     style = "width:100%; height:42px; font-size:14px;")
       )
     ),
 
@@ -55,7 +65,7 @@ sl_ui <- function() {
           # Brand
           div(class = "sl-navbar-brand",
             div(class = "sl-navbar-logo", "SL"),
-            span(class = "sl-navbar-title", "ShinyLabelR")
+            span(class = "sl-navbar-title", "ShinyLabel")
           ),
 
           # Center tab navigation (in navbar)
@@ -141,18 +151,18 @@ sl_ui <- function() {
             div(class = "sl-main",
               div(class = "sl-canvas-toolbar",
                 div(class = "sl-nav-controls",
-                  actionButton("btn_prev", "◀", class = "sl-btn sl-btn-icon"),
+                  actionButton("btn_prev", "←", class = "sl-btn sl-btn-icon"),
                   uiOutput("img_counter_ui"),
-                  actionButton("btn_next", "▶", class = "sl-btn sl-btn-icon")
+                  actionButton("btn_next", "→", class = "sl-btn sl-btn-icon")
                 ),
                 div(class = "sl-toolbar-divider"),
-                actionButton("btn_undo",   "↩ Undo",   class = "sl-btn"),
-                actionButton("btn_delete", "✕ Delete", class = "sl-btn sl-btn-danger"),
-                actionButton("btn_clear",  "⬜ Clear",  class = "sl-btn"),
+                actionButton("btn_undo",   "Undo",   class = "sl-btn"),
+                actionButton("btn_delete", "Delete", class = "sl-btn sl-btn-danger"),
+                actionButton("btn_clear",  "Clear",  class = "sl-btn"),
                 div(style = "flex:1;"),
                 uiOutput("quick_class_selector"),
                 div(class = "sl-toolbar-divider"),
-                actionButton("btn_save_now", "💾 Save", class = "sl-btn sl-btn-success")
+                actionButton("btn_save_now", "Save", class = "sl-btn sl-btn-success")
               ),
 
               div(class = "sl-canvas-wrapper",
@@ -256,7 +266,7 @@ sl_ui <- function() {
             div(class = "sl-export-grid",
               div(class = "sl-panel",
                 div(class = "sl-panel-header",
-                  span(class = "sl-panel-title", "🎯 YOLO Ultralytics Format"),
+                  span(class = "sl-panel-title", "YOLO Ultralytics Format"),
                   span(class = "sl-badge sl-badge-success", "Recommended")
                 ),
                 div(class = "sl-panel-body",
@@ -268,24 +278,24 @@ sl_ui <- function() {
                               step = 0.05, width = "100%", ticks = FALSE),
                   uiOutput("export_yolo_summary"),
                   br(),
-                  actionButton("btn_export_yolo", "⚙ Build YOLO Dataset",
+                  actionButton("btn_export_yolo", "Build YOLO Dataset",
                                class = "sl-btn sl-btn-primary",
-                               style = "width:100%; height:46px; font-size:15px;"),
+                               style = "width:100%; height:42px; font-size:14px;"),
                   uiOutput("export_yolo_link")
                 )
               ),
               div(class = "sl-panel",
                 div(class = "sl-panel-header",
-                  span(class = "sl-panel-title", "🐍 COCO JSON Format"),
+                  span(class = "sl-panel-title", "COCO JSON Format"),
                   span(class = "sl-badge sl-badge-accent", "Python interop")
                 ),
                 div(class = "sl-panel-body",
                   p(class = "sl-help-text",
                     "Compatible with Detectron2, MMDetection and most Python CV libraries."),
                   br(), br(),
-                  actionButton("btn_export_coco", "⚙ Build COCO JSON",
+                  actionButton("btn_export_coco", "Build COCO JSON",
                                class = "sl-btn",
-                               style = "width:100%; height:46px; font-size:15px;"),
+                               style = "width:100%; height:42px; font-size:14px;"),
                   uiOutput("export_coco_link")
                 )
               )
