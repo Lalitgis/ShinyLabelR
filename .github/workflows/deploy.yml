@@ -41,7 +41,7 @@ jobs:
           rsconnect::deployApp(
             appDir  = ".",
             appName = "ShinyLabelR",
-            account = " lalit-apps",
+            account = "lalit-apps",
             forceUpdate = TRUE
           )
         shell: Rscript {0}
