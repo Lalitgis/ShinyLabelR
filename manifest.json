@@ -9,11 +9,6 @@
     "content_category": null,
     "has_parameters": false
   },
-  "environment": {
-    "r": {
-      "requires": ">= 4.1.0"
-    }
-  },
   "packages": {
     "DBI": {
       "Source": "CRAN",
@@ -2024,20 +2019,8 @@
     }
   },
   "files": {
-    ".github/workflows/deploy.yml": {
-      "checksum": "c6893befc49243156d6b400b01f1c6d4"
-    },
-    ".Rbuildignore": {
-      "checksum": "17f847933966777e7397760158d3dc05"
-    },
     "app.R": {
       "checksum": "936b1e0bcabb0a594c9e473e4a8a6195"
-    },
-    "DESCRIPTION": {
-      "checksum": "3f0744bf71e82a8fd286e41205949416"
-    },
-    "inst/app/app.R": {
-      "checksum": "e3536ac7b3f0bb5ae416667c6227311d"
     },
     "inst/app/global.R": {
       "checksum": "d07b23c0c3fed25ba471da3c2069e7e6"
@@ -2051,19 +2034,7 @@
     "inst/app/www/js/shiny_handlers.js": {
       "checksum": "6e740bfd21406a82d1a81627b11ba22c"
     },
-    "inst/sql/schema.sql": {
-      "checksum": "e6f6cde4ca82e4bdf17fe02ea269f94a"
-    },
-    "LICENSE.md": {
-      "checksum": "69cf7eea0ffdd5dadbf6181c57482f9e"
-    },
-    "man/figure/logo.svg": {
-      "checksum": "9ff48d243d0f805bea3416a8fffff158"
-    },
-    "NAMESPACE": {
-      "checksum": "40ed4dd3e3cdef89fafd25514a1e4b00"
-    },
-    "R/Db.R": {
+    "R/db.R": {
       "checksum": "bbf45e9f15eb3c983364c28cd0d3ca59"
     },
     "R/export.R": {
@@ -2078,14 +2049,8 @@
     "R/server.R": {
       "checksum": "54b72ca3010323bcc07169f8f3933b35"
     },
-    "R/supabase.R": {
-      "checksum": "a263a58a25e9dc15cddb083ecddde477"
-    },
-    "R/Ui.R": {
+    "R/ui.R": {
       "checksum": "e27ec3bbfb62411df64a6e4c9ab56cf1"
-    },
-    "README.md": {
-      "checksum": "8a52530765d6765d058f5636ab23aa9d"
     }
   },
   "users": null
