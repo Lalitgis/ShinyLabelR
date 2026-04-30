@@ -2,7 +2,7 @@ name: Deploy to shinyapps.io
 
 on:
   push:
-    branches: [main]   # deploys every time you push to main
+    branches: [main]
 
 jobs:
   deploy:
@@ -30,7 +30,7 @@ jobs:
 
       - name: Deploy to shinyapps.io
         env:
-          SHINYAPPS_TOKEN:  ${{ secrets.SHINYAPPS_TOKEN}}
+          SHINYAPPS_TOKEN:  ${{ secrets.SHINYAPPS_TOKEN }}
           SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
         run: |
           rsconnect::setAccountInfo(
