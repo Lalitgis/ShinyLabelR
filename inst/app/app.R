@@ -1,64 +1,65 @@
-# ─────────────────────────────────────────────────────────────────
-# ShinyLabel — app.R
-# Works locally AND on shinyapps.io without any changes.
-# ─────────────────────────────────────────────────────────────────
+# ==============================================================================
+# app.R — ShinyLabelR root entry point
+# Lives at repo root. Works on shinyapps.io and locally.
+# ==============================================================================
 
-# ── Detect environment ─────────────────────────────────────────────────────
-on_shinyapps <- nzchar(Sys.getenv("SHINYAPPS_TOKEN")) ||
-                identical(Sys.getenv("R_CONFIG_ACTIVE"), "shinyapps") ||
-                nzchar(Sys.getenv("SHINY_HOST"))
+options(shiny.maxRequestSize = 50 * 1024^2)
 
-# ── Resolve app directory ──────────────────────────────────────────────────
-# BUG FIX: sys.frame(1)$ofile fails when the file is run inside a package
-# or via shiny::runApp("path") because the frame chain differs.
-# The correct approach is to use the __file__ equivalent in R.
-app_dir <- tryCatch({
-  # Works when source()'d or run as a script
-  d <- normalizePath(dirname(sys.frame(1)$ofile), mustWork = FALSE)
-  if (!nzchar(d) || d == ".") stop("empty")
-  d
-}, error = function(e) {
-  # Works when launched via shiny::runApp("dir") or as a package
-  tryCatch(normalizePath(getwd(), mustWork = TRUE),
-           error = function(e2) ".")
+# ── Load packages ──────────────────────────────────────────────────────────────
+suppressPackageStartupMessages({
+  library(shiny)
+  library(bslib)
+  library(shinyjs)
+  library(DBI)
+  library(RSQLite)
+  library(jsonlite)
+  library(ggplot2)
+  library(DT)
+  library(magick)
+  library(base64enc)
+  library(zip)
+  library(fs)
+  library(tools)
 })
-cat("[ShinyLabel] Running from:", app_dir, "\n")
-cat("[ShinyLabel] On shinyapps.io:", on_shinyapps, "\n")
 
-# ── Source all R modules ───────────────────────────────────────────────────
-r_files <- list.files(file.path(app_dir, "R"), pattern = "\\.R$", full.names = TRUE)
-for (f in r_files) source(f, local = FALSE)
-
-# ── Static assets ──────────────────────────────────────────────────────────
-shiny::addResourcePath("css", file.path(app_dir, "www", "css"))
-shiny::addResourcePath("js",  file.path(app_dir, "www", "js"))
-
-# Create www/img/ if it doesn't exist (optional folder — avoids crash)
-img_dir <- file.path(app_dir, "www", "img")
-dir.create(img_dir, showWarnings = FALSE, recursive = TRUE)
-shiny::addResourcePath("img", img_dir)
-
-exports_dir <- if (on_shinyapps) {
-  # shinyapps.io: use tempdir — writable, survives the session
-  file.path(tempdir(), "sl_exports")
-} else {
-  # Local: use www/exports/ next to app.R
-  file.path(app_dir, "www", "exports")
+# ── Resolve repo root ──────────────────────────────────────────────────────────
+# On shinyapps.io getwd() = /srv/connect/apps/ShinyLabelR (repo root)
+# Locally getwd() = wherever the user is — use this file's location instead
+repo_root <- tryCatch(
+  normalizePath(dirname(sys.frame(1)$ofile), mustWork = FALSE),
+  error = function(e) getwd()
+)
+if (!file.exists(file.path(repo_root, "DESCRIPTION"))) {
+  repo_root <- getwd()
 }
+cat("[ShinyLabel] Repo root:", repo_root, "\n")
+
+# ── Source R modules in dependency order ───────────────────────────────────────
+r_dir <- file.path(repo_root, "R")
+for (fname in c("db.R", "image_utils.R", "export.R", "run.R", "ui.R", "server.R")) {
+  fpath <- file.path(r_dir, fname)
+  if (file.exists(fpath)) {
+    source(fpath, local = FALSE)
+    cat("[ShinyLabel] Loaded:", fname, "\n")
+  } else {
+    stop("[ShinyLabel] Cannot find: ", fpath)
+  }
+}
+
+# ── Static assets ──────────────────────────────────────────────────────────────
+www_dir <- file.path(repo_root, "inst", "app", "www")
+shiny::addResourcePath("css",  file.path(www_dir, "css"))
+shiny::addResourcePath("js",   file.path(www_dir, "js"))
+
+exports_dir <- file.path(tempdir(), "sl_exports")
 dir.create(exports_dir, showWarnings = FALSE, recursive = TRUE)
 shiny::addResourcePath("exports", exports_dir)
 
-# ── Database path ──────────────────────────────────────────────────────────
-# shinyapps.io: tempdir() — data resets on each restart (acceptable for demo)
-# Local / Shiny Server: next to app.R — persistent
-DB_PATH <- if (on_shinyapps) {
-  file.path(tempdir(), "shinylabel.db")
-} else {
-  file.path(app_dir, "shinylabel.db")
-}
+# ── Database ───────────────────────────────────────────────────────────────────
+DB_PATH <- file.path(tempdir(), "shinylabel.db")
 cat("[ShinyLabel] DB path:", DB_PATH, "\n")
 
-# ── Launch ─────────────────────────────────────────────────────────────────
+# ── Launch ─────────────────────────────────────────────────────────────────────
 shiny::shinyApp(
   ui     = sl_ui(),
   server = sl_server(db_path = DB_PATH)
