@@ -2020,10 +2020,10 @@
   },
   "files": {
     "app.R": {
-      "checksum": "936b1e0bcabb0a594c9e473e4a8a6195"
+      "checksum": "7103659b57bafe7389711338696aadc7"
     },
     "inst/app/global.R": {
-      "checksum": "d07b23c0c3fed25ba471da3c2069e7e6"
+      "checksum": "badc31cbb7519cc9199ad6cc49e0ba52"
     },
     "inst/app/www/css/style.css": {
       "checksum": "e76c793a5949376dfdc44929c44ca5cc"
