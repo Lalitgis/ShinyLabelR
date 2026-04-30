@@ -34,7 +34,7 @@ jobs:
           SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
         run: |
           rsconnect::setAccountInfo(
-            name   = "qmy721-lalit-bc",
+            name   = "lalit-apps",
             token  = Sys.getenv("SHINYAPPS_TOKEN"),
             secret = Sys.getenv("SHINYAPPS_SECRET")
           )
