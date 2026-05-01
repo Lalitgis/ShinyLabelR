@@ -128,3 +128,16 @@ $(document).ready(function() {
   });
 
 });
+
+// ── Auth screen switcher ────────────────────────────────────────────────────
+function switchAuth(screen) {
+  var signin  = document.getElementById("screen-signin");
+  var register = document.getElementById("screen-register");
+  if (screen === "register") {
+    if (signin)   signin.style.display   = "none";
+    if (register) register.style.display = "flex";
+  } else {
+    if (signin)   signin.style.display   = "flex";
+    if (register) register.style.display = "none";
+  }
+}
