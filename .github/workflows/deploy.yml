@@ -32,16 +32,29 @@ jobs:
         env:
           SHINYAPPS_TOKEN:  ${{ secrets.SHINYAPPS_TOKEN }}
           SHINYAPPS_SECRET: ${{ secrets.SHINYAPPS_SECRET }}
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY:     ${{ secrets.SUPABASE_KEY }}
         run: |
           rsconnect::setAccountInfo(
             name   = "lalit-apps",
             token  = Sys.getenv("SHINYAPPS_TOKEN"),
             secret = Sys.getenv("SHINYAPPS_SECRET")
           )
+
+          writeLines(
+            c(
+              paste0("SUPABASE_URL=", Sys.getenv("SUPABASE_URL")),
+              paste0("SUPABASE_KEY=", Sys.getenv("SUPABASE_KEY"))
+            ),
+            ".Renviron"
+          )
+
           rsconnect::deployApp(
-            appDir  = ".",
-            appName = "ShinyLabelR",
-            account = "lalit-apps",
-            forceUpdate = TRUE
+            appDir       = ".",
+            appName      = "ShinyLabelR",
+            account      = "lalit-apps",
+            server       = "shinyapps.io",
+            forceUpdate  = TRUE,
+            launch.browser = FALSE
           )
         shell: Rscript {0}
