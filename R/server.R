@@ -480,58 +480,156 @@ sl_server <- function(db_path = "shinylabel.db") {
         showNotification(paste("Failed:", e$message), type="error"))
     })
 
-    output$supabase_status_badge <- renderUI({
-      if (supabase_ok)
-        span(class="sl-badge sl-badge-success", "Connected")
-      else
-        span(class="sl-badge sl-badge-warning", "Not configured")
+    # ── Team: member count badge ──────────────────────────────────────────────
+    output$team_member_count_badge <- renderUI({
+      members <- rv$team_members
+      n <- if (is.data.frame(members) && nrow(members) > 0L) nrow(members) else 0L
+      span(class = "sl-badge sl-badge-accent",
+           paste0(n, " member", if (n != 1L) "s" else ""))
     })
 
+    # ── Team: member list with avatar, name, email, last active ──────────────
+    output$team_members_table_ui <- renderUI({
+      members <- rv$team_members
+      if (!is.data.frame(members) || nrow(members) == 0L) {
+        return(div(
+          style = "text-align:center;padding:40px 20px;",
+          div(style = "font-size:36px;margin-bottom:12px;", "👥"),
+          p(style = "color:var(--text-muted);font-size:14px;font-weight:500;",
+            "No team members yet."),
+          p(style = "color:var(--text-dim);font-size:13px;",
+            "Members appear here after they sign in for the first time.")
+        ))
+      }
+
+      tagList(
+        lapply(seq_len(nrow(members)), function(i) {
+          m      <- members[i, ]
+          is_me  <- !is.null(rv$annotator) && m$annotator_name == rv$annotator
+          # Derive initials from name
+          name_parts <- strsplit(trimws(m$annotator_name), "\\s+")[[1]]
+          initials   <- toupper(paste0(
+            substr(name_parts[1], 1, 1),
+            if (length(name_parts) > 1) substr(name_parts[2], 1, 1) else ""
+          ))
+          # Pick avatar background from a palette based on name
+          avatar_colors <- c("#4f8ef7","#FF6B6B","#4ECDC4","#FFE66D",
+                             "#B4A7D6","#82B366","#F6A623","#50C878")
+          avatar_bg <- avatar_colors[(utf8ToInt(substr(m$annotator_name,1,1)) %% length(avatar_colors)) + 1L]
+
+          div(
+            style = paste0(
+              "display:flex;align-items:center;gap:14px;",
+              "padding:14px 16px;",
+              "border-bottom:1px solid var(--border);",
+              if (is_me) "background:var(--accent-glow);" else ""
+            ),
+
+            # Avatar circle
+            div(
+              style = paste0(
+                "width:42px;height:42px;border-radius:50%;flex-shrink:0;",
+                "background:", avatar_bg, "22;",
+                "border:2px solid ", avatar_bg, ";",
+                "display:flex;align-items:center;justify-content:center;",
+                "font-weight:700;font-size:15px;color:", avatar_bg, ";"
+              ),
+              initials
+            ),
+
+            # Name + email
+            div(style = "flex:1;min-width:0;",
+              div(style = "display:flex;align-items:center;gap:8px;",
+                span(style = "font-size:14px;font-weight:600;color:var(--text-primary);",
+                     m$annotator_name),
+                if (is_me)
+                  span(style = "font-size:11px;color:var(--text-muted);
+                                background:var(--bg-card);border:1px solid var(--border);
+                                border-radius:4px;padding:1px 6px;",
+                       "you"),
+                if (!is.null(rv$user_role) && rv$user_role == "admin" && is_me)
+                  span(class = "sl-badge sl-badge-warning", "Admin")
+              ),
+              div(style = "font-size:12px;color:var(--text-muted);margin-top:2px;",
+                paste0("Last active: ", substr(m$last_active %||% "—", 1, 16))
+              )
+            ),
+
+            # Sessions count
+            div(style = "flex-shrink:0;",
+              span(class = "sl-badge sl-badge-accent",
+                   paste0(m$sessions, " session", if (m$sessions != 1L) "s" else ""))
+            )
+          )
+        })
+      )
+    })
+
+    # ── Team: invite panel (admin only) ───────────────────────────────────────
     output$team_invite_panel <- renderUI({
-      div(class="sl-panel", style="margin-bottom:18px;",
-        div(class="sl-panel-header",
-          span(class="sl-panel-title", "Invite a Team Member"),
+      div(class = "sl-panel",
+        div(class = "sl-panel-header",
+          span(class = "sl-panel-title", "Invite a Team Member"),
           if (is_admin())
-            span(class="sl-badge sl-badge-warning", "Admin")
+            span(class = "sl-badge sl-badge-warning", "Admin")
           else
-            span(class="sl-badge sl-badge-accent", "Admin only")
+            span(class = "sl-badge sl-badge-accent", "Admin only")
         ),
-        div(class="sl-panel-body",
+        div(class = "sl-panel-body",
           if (!is_admin()) {
-            p(style="color:var(--text-muted);font-size:13px;",
-              "Only the project admin can generate invite codes.")
+            div(style = "text-align:center;padding:20px;",
+              p(style = "color:var(--text-muted);font-size:13px;",
+                "Only the project admin can generate invite codes."),
+              p(style = "color:var(--text-dim);font-size:12px;",
+                "Ask your admin to share a code with you from this tab.")
+            )
           } else {
             tagList(
-              p(class="sl-help-text",
-                "Generate a one-time code and share it with your teammate via Slack, WhatsApp, or email. Codes expire in 72 hours."),
-              div(style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;",
+              p(class = "sl-help-text",
+                "Generate a one-time invite code and share it via Slack, WhatsApp, or email. Each code works for one person and expires after 72 hours."),
+
+              div(style = "display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px;",
                 actionButton("btn_gen_invite", "Generate Invite Code",
-                             class="sl-btn sl-btn-primary", style="height:40px;"),
+                             class = "sl-btn sl-btn-primary",
+                             style = "height:40px;"),
                 uiOutput("latest_code_display")
               ),
+
               if (is.data.frame(rv$invite_codes) && nrow(rv$invite_codes) > 0L) {
                 tagList(
-                  tags$hr(class="sl-divider"),
-                  tags$strong(style="font-size:12px;color:var(--text-muted);", "Recent codes"),
-                  tags$table(style="width:100%;margin-top:8px;border-collapse:collapse;font-size:12px;",
-                    tags$thead(tags$tr(
-                      tags$th(style="text-align:left;padding:4px 8px;color:var(--text-muted);", "Code"),
-                      tags$th(style="text-align:left;padding:4px 8px;color:var(--text-muted);", "Expires"),
-                      tags$th(style="text-align:left;padding:4px 8px;color:var(--text-muted);", "Status")
-                    )),
-                    tags$tbody(lapply(seq_len(nrow(rv$invite_codes)), function(i) {
-                      r <- rv$invite_codes[i,]
-                      is_used <- !is.null(r$used_at) && nzchar(r$used_at %||% "")
+                  tags$hr(class = "sl-divider"),
+                  div(style = "font-size:11px;font-weight:600;text-transform:uppercase;
+                               letter-spacing:0.06em;color:var(--text-muted);margin-bottom:8px;",
+                      "Recent codes"),
+                  tags$table(
+                    style = "width:100%;border-collapse:collapse;font-size:13px;",
+                    tags$thead(
                       tags$tr(
-                        tags$td(style="padding:5px 8px;",
-                          tags$code(style="color:var(--accent);", r$code)),
-                        tags$td(style="padding:5px 8px;color:var(--text-muted);",
-                          substr(r$expires_at %||% "", 1, 16)),
-                        tags$td(style="padding:5px 8px;",
-                          if(is_used) span(class="sl-badge sl-badge-success","Used")
-                          else span(class="sl-badge sl-badge-accent","Active"))
+                        tags$th(style = "text-align:left;padding:5px 8px;color:var(--text-muted);font-size:11px;font-weight:600;", "Code"),
+                        tags$th(style = "text-align:left;padding:5px 8px;color:var(--text-muted);font-size:11px;font-weight:600;", "Expires"),
+                        tags$th(style = "text-align:left;padding:5px 8px;color:var(--text-muted);font-size:11px;font-weight:600;", "Status")
                       )
-                    }))
+                    ),
+                    tags$tbody(
+                      lapply(seq_len(nrow(rv$invite_codes)), function(i) {
+                        r      <- rv$invite_codes[i, ]
+                        is_used <- !is.null(r$used_at) && nzchar(r$used_at %||% "")
+                        tags$tr(
+                          tags$td(style = "padding:6px 8px;",
+                            tags$code(style = "font-size:13px;font-weight:700;color:var(--accent);
+                                              letter-spacing:0.06em;", r$code)
+                          ),
+                          tags$td(style = "padding:6px 8px;color:var(--text-muted);font-size:12px;",
+                            substr(r$expires_at %||% "—", 1, 16)),
+                          tags$td(style = "padding:6px 8px;",
+                            if (is_used)
+                              span(class = "sl-badge sl-badge-success", "Used")
+                            else
+                              span(class = "sl-badge sl-badge-accent", "Active")
+                          )
+                        )
+                      })
+                    )
                   )
                 )
               }
@@ -542,46 +640,6 @@ sl_server <- function(db_path = "shinylabel.db") {
     })
 
     output$latest_code_display <- renderUI(NULL)
-
-    output$team_members_panel <- renderUI({
-      members <- rv$team_members
-      div(class="sl-panel",
-        div(class="sl-panel-header",
-          span(class="sl-panel-title","Members"),
-          if (is.data.frame(members) && nrow(members) > 0L)
-            span(class="sl-badge sl-badge-accent", nrow(members))
-        ),
-        div(class="sl-panel-body",
-          if (!is.data.frame(members) || nrow(members) == 0L) {
-            p(style="color:var(--text-muted);font-size:13px;",
-              "No team activity yet. Members appear here after they sign in.")
-          } else {
-            tags$table(style="width:100%;border-collapse:collapse;",
-              tags$thead(tags$tr(
-                tags$th(style="text-align:left;padding:6px 8px;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;", "Name"),
-                tags$th(style="text-align:left;padding:6px 8px;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;", "Sessions"),
-                tags$th(style="text-align:left;padding:6px 8px;font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;", "Last Active")
-              )),
-              tags$tbody(lapply(seq_len(nrow(members)), function(i) {
-                m <- members[i,]
-                is_me <- !is.null(rv$annotator) && m$annotator_name == rv$annotator
-                tags$tr(style=if(is_me)"background:var(--accent-glow);" else "",
-                  tags$td(style="padding:8px;font-size:13px;",
-                    tagList(
-                      m$annotator_name,
-                      if(is_me) span(style="margin-left:6px;font-size:11px;color:var(--text-muted);","(you)")
-                    )
-                  ),
-                  tags$td(style="padding:8px;font-size:13px;color:var(--text-muted);", m$sessions),
-                  tags$td(style="padding:8px;font-size:12px;color:var(--text-muted);font-family:monospace;",
-                    substr(m$last_active %||% "", 1, 16))
-                )
-              }))
-            )
-          }
-        )
-      )
-    })
 
     # ════════════════════════════════════════════════════════════════════════
     # EXPORTS
