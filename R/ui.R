@@ -25,8 +25,8 @@ sl_ui <- function() {
         h1(class = "auth-title", "Welcome back"),
         p(class = "auth-subtitle",
           "Sign in to continue annotating. New to this project? ",
-          tags$a(href="#", class="auth-link",
-                 onclick="switchAuth('register');return false;",
+          tags$a(href = "#", class = "auth-link",
+                 onclick = "switchAuth('register');return false;",
                  "Create an account →")
         ),
         div(class = "auth-field",
@@ -69,19 +69,18 @@ sl_ui <- function() {
           h1(class = "auth-title", "Create account"),
           p(class = "auth-subtitle",
             "Already have an account? ",
-            tags$a(href="#", class="auth-link",
-                   onclick="switchAuth('signin');return false;",
+            tags$a(href = "#", class = "auth-link",
+                   onclick = "switchAuth('signin');return false;",
                    "Sign in →")
           ),
 
-          # Info banner — first user = admin
           div(class = "auth-info-banner",
             span(class = "auth-info-icon", "ℹ"),
             div(
               tags$strong("First user becomes admin automatically."),
               tags$br(),
-              span(style="font-size:12px;",
-                "Subsequent users need an invite code from the admin.")
+              span(style = "font-size:12px;",
+                   "Subsequent users need an invite code from the admin.")
             )
           ),
 
@@ -98,7 +97,7 @@ sl_ui <- function() {
           div(class = "auth-field",
             tags$label(
               HTML("Invite code &nbsp;"),
-              tags$span(style="font-weight:400;color:var(--text-muted);font-size:11px;",
+              tags$span(style = "font-weight:400;color:var(--text-muted);font-size:11px;",
                         "(not needed for first user)"),
               class = "sl-form-label"
             ),
@@ -108,8 +107,8 @@ sl_ui <- function() {
           actionButton("btn_register", "Create account",
                        class = "sl-btn sl-btn-primary auth-submit"),
           div(style = "margin-top:16px;text-align:center;",
-            tags$a(href="#", style="font-size:13px;color:var(--text-muted);",
-                   onclick="switchAuth('signin');return false;",
+            tags$a(href = "#", style = "font-size:13px;color:var(--text-muted);",
+                   onclick = "switchAuth('signin');return false;",
                    "← Back to sign in")
           )
         )
@@ -132,10 +131,10 @@ sl_ui <- function() {
             tags$button(class = "sl-nav-tab", id = "tab-btn-export",
                         onclick = "switchTab('export')", "Export"),
             tags$button(class = "sl-nav-tab", id = "tab-btn-team",
-                        onclick = "switchTab('team');Shiny.setInputValue('load_team_tab', Math.random(), {priority:'event'});",
+                        onclick = "switchTab('team');Shiny.setInputValue('load_team_tab',Math.random(),{priority:'event'});",
                         "Team"),
             tags$button(class = "sl-nav-tab", id = "tab-btn-dashboard",
-                        onclick = "switchTab('dashboard');Shiny.setInputValue('load_dashboard_tab', Math.random(), {priority:'event'});",
+                        onclick = "switchTab('dashboard');Shiny.setInputValue('load_dashboard_tab',Math.random(),{priority:'event'});",
                         "Dashboard")
           ),
           div(class = "sl-navbar-meta",
@@ -342,69 +341,22 @@ sl_ui <- function() {
             div(class = "sl-page-header",
               h2(class = "sl-page-title", "Team"),
               p(class = "sl-page-subtitle",
-                "Manage who has access to this annotation project.")
+                "Everyone who has joined this annotation project.")
             ),
 
-            # Supabase connection setup card
+            # Members card
             div(class = "sl-panel", style = "margin-bottom:18px;",
               div(class = "sl-panel-header",
-                span(class = "sl-panel-title", "Supabase Connection"),
-                uiOutput("supabase_status_badge")
+                span(class = "sl-panel-title", "Members"),
+                uiOutput("team_member_count_badge")
               ),
-              div(class = "sl-panel-body",
-                div(class = "supabase-setup-steps",
-                  div(class = "setup-step",
-                    div(class = "setup-step-num", "1"),
-                    div(class = "setup-step-body",
-                      tags$strong("Create a free Supabase project"),
-                      tags$br(),
-                      tags$a(href="https://supabase.com", target="_blank",
-                             class="auth-link", "supabase.com → New project")
-                    )
-                  ),
-                  div(class = "setup-step",
-                    div(class = "setup-step-num", "2"),
-                    div(class = "setup-step-body",
-                      tags$strong("Run the schema SQL"),
-                      tags$br(),
-                      span(style="font-size:12px;color:var(--text-muted);",
-                        "SQL Editor → New Query → paste ",
-                        tags$code("inst/sql/schema.sql"), " → Run")
-                    )
-                  ),
-                  div(class = "setup-step",
-                    div(class = "setup-step-num", "3"),
-                    div(class = "setup-step-body",
-                      tags$strong("Add environment variables to shinyapps.io"),
-                      tags$br(),
-                      span(style="font-size:12px;color:var(--text-muted);",
-                        "App → Settings → Environment Variables"),
-                      div(style="margin-top:8px;display:flex;flex-direction:column;gap:4px;",
-                        tags$code(style="font-size:12px;padding:4px 8px;background:var(--bg-deep);border-radius:4px;border:1px solid var(--border);",
-                          "SUPABASE_URL=https://yourproject.supabase.co"),
-                        tags$code(style="font-size:12px;padding:4px 8px;background:var(--bg-deep);border-radius:4px;border:1px solid var(--border);",
-                          "SUPABASE_KEY=your-anon-public-key")
-                      )
-                    )
-                  ),
-                  div(class = "setup-step",
-                    div(class = "setup-step-num", "4"),
-                    div(class = "setup-step-body",
-                      tags$strong("Redeploy — done"),
-                      tags$br(),
-                      span(style="font-size:12px;color:var(--text-muted);",
-                        "Push to GitHub and the app auto-deploys with team support enabled.")
-                    )
-                  )
-                )
+              div(class = "sl-panel-body", style = "padding:0;",
+                uiOutput("team_members_table_ui")
               )
             ),
 
-            # Invite codes (only shown when Supabase is connected)
-            uiOutput("team_invite_panel"),
-
-            # Members table
-            uiOutput("team_members_panel")
+            # Invite codes — admin only
+            uiOutput("team_invite_panel")
           )
         ), # end team
 
