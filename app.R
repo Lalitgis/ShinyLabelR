@@ -18,17 +18,18 @@ suppressPackageStartupMessages({
   library(zip)
   library(fs)
   library(tools)
+  library(httr2)
+  library(digest)
 })
 
-# ── Repo root — use getwd() directly, it is always correct on shinyapps.io ────
+# ── Repo root ──────────────────────────────────────────────────────────────────
 repo_root <- getwd()
 cat("[ShinyLabel] Working directory:", repo_root, "\n")
-cat("[ShinyLabel] DESCRIPTION exists:", file.exists(file.path(repo_root, "DESCRIPTION")), "\n")
 cat("[ShinyLabel] R/ exists:", dir.exists(file.path(repo_root, "R")), "\n")
 
-# ── Source R modules ───────────────────────────────────────────────────────────
+# ── Source R modules in dependency order ──────────────────────────────────────
 r_dir <- file.path(repo_root, "R")
-for (fname in c("db.R", "image_utils.R", "export.R", "run.R", "ui.R", "server.R")) {
+for (fname in c("db.R", "auth.R", "image_utils.R", "export.R", "run.R", "ui.R", "server.R")) {
   fpath <- file.path(r_dir, fname)
   if (file.exists(fpath)) {
     source(fpath, local = FALSE)
