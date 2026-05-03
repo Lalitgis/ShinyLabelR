@@ -124,7 +124,7 @@ sl_ui <- function() {
         div(class = "sl-navbar",
           div(class = "sl-navbar-brand",
             div(class = "sl-navbar-logo", "SL"),
-            span(class = "sl-navbar-title", "ShinyLabel")
+            span(class = "sl-navbar-title", "ShinyLabelR")
           ),
           div(class = "sl-navbar-tabs",
             tags$button(class = "sl-nav-tab active", id = "tab-btn-annotate",
