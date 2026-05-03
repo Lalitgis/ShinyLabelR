@@ -204,7 +204,6 @@ sl_ui <- function() {
                   uiOutput("img_counter_ui"),
                   actionButton("btn_next", "→", class = "sl-btn sl-btn-icon")
                 ),
-                div(class = "sl-toolbar-divider"),
                 actionButton("btn_undo",   "Undo",   class = "sl-btn"),
                 actionButton("btn_delete", "Delete", class = "sl-btn sl-btn-danger"),
                 actionButton("btn_clear",  "Clear",  class = "sl-btn"),
