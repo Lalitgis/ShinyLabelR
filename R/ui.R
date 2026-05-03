@@ -14,20 +14,19 @@ sl_ui <- function() {
       tags$title("ShinyLabelR — R Annotation Tool")
     ),
 
-    # ══ SCREEN 1: SIGN IN ═════════════════════════════════════════════════════
-    div(id = "screen-signin",
-      style = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg-deep);z-index:9999;background-image:radial-gradient(ellipse 80% 60% at 50% -20%, rgba(79,142,247,0.08) 0%, transparent 70%);",
+    # ══ SCREEN: SIGN IN ═══════════════════════════════════════════════════════
+    div(id = "screen-signin", class = "auth-screen",
       div(class = "auth-card",
         div(class = "auth-logo",
           div(class = "auth-logo-mark", "SL"),
           span("ShinyLabelR")
         ),
-        h1(class = "auth-title", "Welcome back"),
+        h1(class = "auth-title", "Sign in"),
         p(class = "auth-subtitle",
-          "Sign in to continue annotating. New to this project? ",
+          "Don't have an account? ",
           tags$a(href = "#", class = "auth-link",
                  onclick = "switchAuth('register');return false;",
-                 "Create an account →")
+                 "Create one →")
         ),
         div(class = "auth-field",
           tags$label("Email address", class = "sl-form-label"),
@@ -35,12 +34,21 @@ sl_ui <- function() {
                     placeholder = "you@example.com", width = "100%")
         ),
         div(class = "auth-field",
-          tags$label("Display name", class = "sl-form-label"),
-          textInput("signin_name", NULL,
-                    placeholder = "How should we call you?", width = "100%")
+          tags$label("Password", class = "sl-form-label"),
+          tags$input(id = "signin_password", type = "password",
+                     class = "form-control",
+                     placeholder = "Your password",
+                     style = "width:100%;")
         ),
-        div(style = "display:flex;align-items:center;gap:10px;margin-bottom:24px;",
-          span(class = "sl-form-label", style = "margin:0;flex-shrink:0;", "Appearance"),
+        div(style = "text-align:right;margin-bottom:20px;",
+          tags$a(href = "#", class = "auth-link",
+                 style = "font-size:12px;",
+                 onclick = "switchAuth('forgot');return false;",
+                 "Forgot password?")
+        ),
+        actionButton("btn_signin", "Sign in →",
+                     class = "sl-btn sl-btn-primary auth-submit"),
+        div(style = "margin-top:20px;text-align:center;",
           tags$label(class = "sl-toggle-wrap",
             tags$input(type = "checkbox", id = "theme_toggle",
                        onchange = "toggleTheme(this)"),
@@ -50,17 +58,15 @@ sl_ui <- function() {
             )
           ),
           span(id = "theme_label",
-               style = "font-size:12px;color:var(--text-muted);", "Dark mode")
-        ),
-        actionButton("btn_signin", "Sign in →",
-                     class = "sl-btn sl-btn-primary auth-submit")
+               style = "font-size:12px;color:var(--text-muted);margin-left:8px;",
+               "Dark mode")
+        )
       )
     ),
 
-    # ══ SCREEN 2: CREATE ACCOUNT ══════════════════════════════════════════════
+    # ══ SCREEN: CREATE ACCOUNT ════════════════════════════════════════════════
     shinyjs::hidden(
-      div(id = "screen-register",
-        style = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg-deep);z-index:9999;background-image:radial-gradient(ellipse 80% 60% at 50% -20%, rgba(79,142,247,0.08) 0%, transparent 70%);",
+      div(id = "screen-register", class = "auth-screen",
         div(class = "auth-card",
           div(class = "auth-logo",
             div(class = "auth-logo-mark", "SL"),
@@ -77,17 +83,24 @@ sl_ui <- function() {
           div(class = "auth-info-banner",
             span(class = "auth-info-icon", "ℹ"),
             div(
-              tags$strong("First user becomes admin automatically."),
+              tags$strong("First person to register becomes the admin."),
               tags$br(),
               span(style = "font-size:12px;",
-                   "Subsequent users need an invite code from the admin.")
+                   "Team members need an invite link sent by the admin.")
             )
           ),
 
-          div(class = "auth-field",
-            tags$label("Your name", class = "sl-form-label"),
-            textInput("reg_name", NULL,
-                      placeholder = "e.g. Alice Chen", width = "100%")
+          div(style = "display:flex;gap:12px;",
+            div(class = "auth-field", style = "flex:1;",
+              tags$label("First name", class = "sl-form-label"),
+              textInput("reg_first_name", NULL,
+                        placeholder = "Alice", width = "100%")
+            ),
+            div(class = "auth-field", style = "flex:1;",
+              tags$label("Last name", class = "sl-form-label"),
+              textInput("reg_last_name", NULL,
+                        placeholder = "Chen", width = "100%")
+            )
           ),
           div(class = "auth-field",
             tags$label("Email address", class = "sl-form-label"),
@@ -95,19 +108,96 @@ sl_ui <- function() {
                       placeholder = "you@example.com", width = "100%")
           ),
           div(class = "auth-field",
-            tags$label(
-              HTML("Invite code &nbsp;"),
-              tags$span(style = "font-weight:400;color:var(--text-muted);font-size:11px;",
-                        "(not needed for first user)"),
-              class = "sl-form-label"
-            ),
-            textInput("reg_invite_code", NULL,
-                      placeholder = "e.g. ANT-4829", width = "100%")
+            tags$label("Password", class = "sl-form-label"),
+            tags$input(id = "reg_password", type = "password",
+                       class = "form-control",
+                       placeholder = "At least 8 characters",
+                       style = "width:100%;")
+          ),
+          div(class = "auth-field",
+            tags$label("Confirm password", class = "sl-form-label"),
+            tags$input(id = "reg_password2", type = "password",
+                       class = "form-control",
+                       placeholder = "Repeat your password",
+                       style = "width:100%;")
           ),
           actionButton("btn_register", "Create account",
                        class = "sl-btn sl-btn-primary auth-submit"),
-          div(style = "margin-top:16px;text-align:center;",
+          div(style = "margin-top:14px;text-align:center;",
             tags$a(href = "#", style = "font-size:13px;color:var(--text-muted);",
+                   onclick = "switchAuth('signin');return false;",
+                   "← Back to sign in")
+          )
+        )
+      )
+    ),
+
+    # ══ SCREEN: FORGOT PASSWORD ═══════════════════════════════════════════════
+    shinyjs::hidden(
+      div(id = "screen-forgot", class = "auth-screen",
+        div(class = "auth-card",
+          div(class = "auth-logo",
+            div(class = "auth-logo-mark", "SL"),
+            span("ShinyLabelR")
+          ),
+          h1(class = "auth-title", "Reset password"),
+          p(class = "auth-subtitle",
+            "Enter your email and we'll send you a reset link."),
+          div(class = "auth-field",
+            tags$label("Email address", class = "sl-form-label"),
+            textInput("forgot_email", NULL,
+                      placeholder = "you@example.com", width = "100%")
+          ),
+          actionButton("btn_forgot", "Send reset link",
+                       class = "sl-btn sl-btn-primary auth-submit"),
+          div(style = "margin-top:14px;text-align:center;",
+            tags$a(href = "#", style = "font-size:13px;color:var(--text-muted);",
+                   onclick = "switchAuth('signin');return false;",
+                   "← Back to sign in")
+          )
+        )
+      )
+    ),
+
+    # ══ SCREEN: RESET PASSWORD ════════════════════════════════════════════════
+    shinyjs::hidden(
+      div(id = "screen-reset", class = "auth-screen",
+        div(class = "auth-card",
+          div(class = "auth-logo",
+            div(class = "auth-logo-mark", "SL"),
+            span("ShinyLabelR")
+          ),
+          h1(class = "auth-title", "Set new password"),
+          p(class = "auth-subtitle", "Choose a strong new password."),
+          div(class = "auth-field",
+            tags$label("New password", class = "sl-form-label"),
+            tags$input(id = "reset_password", type = "password",
+                       class = "form-control",
+                       placeholder = "At least 8 characters",
+                       style = "width:100%;")
+          ),
+          div(class = "auth-field",
+            tags$label("Confirm password", class = "sl-form-label"),
+            tags$input(id = "reset_password2", type = "password",
+                       class = "form-control",
+                       placeholder = "Repeat your password",
+                       style = "width:100%;")
+          ),
+          actionButton("btn_reset_password", "Update password",
+                       class = "sl-btn sl-btn-primary auth-submit")
+        )
+      )
+    ),
+
+    # ══ SCREEN: CHECK EMAIL ═══════════════════════════════════════════════════
+    shinyjs::hidden(
+      div(id = "screen-check-email", class = "auth-screen",
+        div(class = "auth-card", style = "text-align:center;",
+          div(style = "font-size:48px;margin-bottom:16px;", "📬"),
+          h1(class = "auth-title", "Check your email"),
+          uiOutput("check_email_msg"),
+          div(style = "margin-top:24px;",
+            tags$a(href = "#", class = "auth-link", style = "font-size:13px;",
                    onclick = "switchAuth('signin');return false;",
                    "← Back to sign in")
           )
@@ -155,7 +245,6 @@ sl_ui <- function() {
         div(id = "tab-annotate", class = "sl-tab-panel active",
           div(class = "sl-layout",
 
-            # Left sidebar
             div(class = "sl-sidebar-left",
               div(class = "sl-panel",
                 div(class = "sl-panel-header",
@@ -196,7 +285,6 @@ sl_ui <- function() {
               )
             ),
 
-            # Canvas
             div(class = "sl-main",
               div(class = "sl-canvas-toolbar",
                 div(class = "sl-nav-controls",
@@ -209,7 +297,6 @@ sl_ui <- function() {
                 actionButton("btn_clear",  "Clear",  class = "sl-btn"),
                 div(style = "flex:1;"),
                 uiOutput("quick_class_selector"),
-                div(class = "sl-toolbar-divider"),
                 actionButton("btn_save_now", "Save", class = "sl-btn sl-btn-success")
               ),
               div(class = "sl-canvas-wrapper",
@@ -218,7 +305,6 @@ sl_ui <- function() {
               div(class = "sl-canvas-status", uiOutput("canvas_status_ui"))
             ),
 
-            # Right sidebar
             div(class = "sl-sidebar-right",
               div(class = "sl-panel",
                 div(class = "sl-panel-header",
@@ -354,7 +440,7 @@ sl_ui <- function() {
               )
             ),
 
-            # Invite codes — admin only
+            # Invite by email — admin only
             uiOutput("team_invite_panel")
           )
         ), # end team
