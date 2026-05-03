@@ -2,15 +2,67 @@
 # global.R — ShinyLabelR
 #
 # Runs ONCE before app.R on every startup — locally and on shinyapps.io.
-# Handles: upload size limit, package loading, R module sourcing.
+# Handles: upload size limit, package installation, package loading,
+#          R module sourcing, and environment detection.
 # ==============================================================================
 
 
 # ── 0. Upload size limit ───────────────────────────────────────────────────────
+# Shiny's default is only 5MB — far too small for high-res images.
+# Raised to 50MB per file. Increase further for satellite/medical imagery.
+# Must be set BEFORE the app starts (here in global.R is the right place).
 options(shiny.maxRequestSize = 50 * 1024^2)   # 50 MB per uploaded file
 
 
-# ── 1. Load packages ───────────────────────────────────────────────────────────
+# ── 1. Required packages ───────────────────────────────────────────────────────
+required_pkgs <- c(
+  # Shiny framework
+  "shiny",
+  "bslib",
+  "shinyjs",
+
+  # Database
+  "DBI",
+  "RSQLite",
+
+  # Data / export
+  "jsonlite",
+  "zip",
+
+  # Plots and tables
+  "ggplot2",
+  "DT",
+
+  # Image handling
+  "magick",
+  "base64enc",
+
+  # File utilities
+  "fs",
+  "tools",
+  "utils"
+)
+
+
+# ── 2. Install any missing packages ───────────────────────────────────────────
+missing_pkgs <- required_pkgs[
+  !sapply(required_pkgs, requireNamespace, quietly = TRUE)
+]
+
+if (length(missing_pkgs) > 0) {
+  message("[ShinyLabelR] Installing missing packages: ",
+          paste(missing_pkgs, collapse = ", "))
+  install.packages(
+    missing_pkgs,
+    repos        = "https://cran.rstudio.com/",
+    quiet        = TRUE,
+    dependencies = TRUE
+  )
+  message("[ShinyLabelR] Package installation complete.")
+}
+
+
+# ── 3. Load packages ───────────────────────────────────────────────────────────
 suppressPackageStartupMessages({
   library(shiny)
   library(bslib)
@@ -20,75 +72,43 @@ suppressPackageStartupMessages({
   library(jsonlite)
   library(ggplot2)
   library(DT)
-  library(magick)
-  library(base64enc)
-  library(zip)
-  library(fs)
-  library(tools)
-  library(httr2)
 })
 
 
-# ── 2. Detect environment ──────────────────────────────────────────────────────
+# ── 4. Detect environment ──────────────────────────────────────────────────────
 on_shinyapps <- nzchar(Sys.getenv("SHINYAPPS_TOKEN")) ||
                 nzchar(Sys.getenv("SHINY_HOST"))
 
 message("[ShinyLabelR] Running on shinyapps.io: ", on_shinyapps)
 
 
-# ── 3. Find the R/ folder ─────────────────────────────────────────────────────
-# The challenge: on shinyapps.io the working directory is the repo root
-# (/srv/connect/apps/ShinyLabelR) but global.R lives inside inst/app/.
-# We try four candidate locations in order of preference and use the first
-# one that actually exists and contains .R files.
-
-candidates <- c(
-  # 1. Repo root R/ — correct on shinyapps.io
-  file.path(getwd(), "R"),
-
-  # 2. Two levels up from inst/app/ — also correct on shinyapps.io
-  normalizePath(file.path(dirname(sys.frame(1)$ofile), "..", "..", "R"),
-                mustWork = FALSE),
-
-  # 3. Next to app.R when running locally via shiny::runApp("inst/app")
-  normalizePath(file.path(dirname(sys.frame(1)$ofile), "R"),
-                mustWork = FALSE),
-
-  # 4. Absolute shinyapps.io path — hard fallback
-  "/srv/connect/apps/ShinyLabelR/R"
+# ── 5. Resolve app directory ───────────────────────────────────────────────────
+# Works with shiny::runApp(), shiny::runGitHub(), and shinyapps.io deployment
+app_dir <- tryCatch(
+  normalizePath(dirname(sys.frame(1)$ofile), mustWork = FALSE),
+  error = function(e) NULL
 )
-
-r_dir <- NULL
-for (candidate in candidates) {
-  if (dir.exists(candidate) &&
-      length(list.files(candidate, pattern = "\\.R$")) > 0) {
-    r_dir <- normalizePath(candidate, mustWork = FALSE)
-    break
-  }
+if (is.null(app_dir) || !nzchar(app_dir)) {
+  app_dir <- normalizePath(getwd(), mustWork = TRUE)
 }
-
-if (is.null(r_dir)) {
-  stop(
-    "[ShinyLabelR] Cannot find the R/ folder. Tried:\n",
-    paste0("  - ", candidates, collapse = "\n"),
-    "\nWorking directory: ", getwd()
-  )
-}
-
-message("[ShinyLabelR] Found R/ at: ", r_dir)
+message("[ShinyLabelR] App directory: ", app_dir)
 
 
-# ── 4. Source all R modules ────────────────────────────────────────────────────
-# Source in explicit order so dependencies are met:
-#   db.R          must come before server.R (defines sl_init_db etc.)
-#   image_utils.R must come before server.R (defines sl_image_b64 etc.)
-#   export.R      must come before server.R (defines sl_export_yolo etc.)
-#   ui.R          must come before app.R    (defines sl_ui)
-#   server.R      last — depends on all of the above
-source_order <- c("db.R", "image_utils.R", "export.R", "run.R", "ui.R", "server.R")
+# ── 6. Source all R modules ────────────────────────────────────────────────────
+# Sources every .R file in the R/ folder in alphabetical order:
+#   db.R            → database init and CRUD
+#   export.R        → YOLO and COCO export functions
+#   image_utils.R   → base64 encoding, magick helpers, URL fetch
+#   run.R           → run_shinylabel() launcher
+#   server.R        → Shiny server logic
+#   ui.R            → Shiny UI definition
+# Source in explicit dependency order:
+# db.R must load before auth.R (auth uses sl_create_token etc.)
+# auth.R must load before server.R (server uses auth_send_* functions)
+source_order <- c("db.R", "auth.R", "image_utils.R", "export.R", "run.R", "ui.R", "server.R")
 
 for (fname in source_order) {
-  fpath <- file.path(r_dir, fname)
+  fpath <- file.path(app_dir, "R", fname)
   if (file.exists(fpath)) {
     source(fpath, local = FALSE)
     message("[ShinyLabelR] Loaded: ", fname)
