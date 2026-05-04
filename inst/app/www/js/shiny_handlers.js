@@ -130,14 +130,32 @@ $(document).ready(function() {
 });
 
 // ── Auth screen switcher ────────────────────────────────────────────────────
+// Handles all auth screen transitions. 'screen' can be:
+//   'signin' | 'register' | 'forgot' | 'reset' | 'check-email' | 'main-app'
+var ALL_AUTH_SCREENS = [
+  "screen-signin",
+  "screen-register",
+  "screen-forgot",
+  "screen-reset",
+  "screen-check-email"
+];
+
 function switchAuth(screen) {
-  var signin  = document.getElementById("screen-signin");
-  var register = document.getElementById("screen-register");
-  if (screen === "register") {
-    if (signin)   signin.style.display   = "none";
-    if (register) register.style.display = "flex";
+  // Hide all auth screens
+  ALL_AUTH_SCREENS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.remove("auth-screen-active");
+  });
+
+  // Hide main-app too (in case we're going back to auth)
+  var mainApp = document.getElementById("main-app");
+  if (mainApp) mainApp.style.display = "none";
+
+  if (screen === "main-app") {
+    if (mainApp) mainApp.style.display = "block";
   } else {
-    if (signin)   signin.style.display   = "flex";
-    if (register) register.style.display = "none";
+    var targetId = "screen-" + screen;
+    var target = document.getElementById(targetId);
+    if (target) target.classList.add("auth-screen-active");
   }
 }
