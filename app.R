@@ -2,6 +2,12 @@
 # app.R — ShinyLabelR root entry point
 # ==============================================================================
 
+# CRITICAL: Disable Shiny's automatic R/ folder loading.
+# Without this, Shiny auto-sources all files in R/ alphabetically before app.R
+# runs — auth.R loads before db.R, server.R loads before all of them, and R
+# fails to parse because dependencies are missing. We source explicitly below.
+options(shiny.autoload.r = FALSE)
+
 options(shiny.maxRequestSize = 50 * 1024^2)
 
 suppressPackageStartupMessages({
@@ -27,7 +33,7 @@ repo_root <- getwd()
 cat("[ShinyLabel] Working directory:", repo_root, "\n")
 cat("[ShinyLabel] R/ exists:", dir.exists(file.path(repo_root, "R")), "\n")
 
-# ── Source R modules in dependency order ──────────────────────────────────────
+# ── Source R modules in explicit dependency order ─────────────────────────────
 r_dir <- file.path(repo_root, "R")
 for (fname in c("db.R", "auth.R", "image_utils.R", "export.R", "run.R", "ui.R", "server.R")) {
   fpath <- file.path(r_dir, fname)
