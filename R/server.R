@@ -260,18 +260,20 @@ sl_server <- function(db_path = "shinylabel.db") {
       # Send verification email
       verify_token <- sl_create_token(con, "verify", email, hours_valid = 24L)
 
-      if (resend_ok) {
-        sent <- auth_send_verification_email(email, first, verify_token)
-        if (sent) {
-          output$check_email_msg <- renderUI(
-            p(class = "auth-subtitle", style = "color:var(--text-muted);",
-              paste0("We sent a verification link to ", tags$strong(email),
-                     ". Click the link in the email to activate your account."))
-          )
-          show_screen("screen-check-email")
-          showNotification(
-            paste0("Account created! Check ", email, " for a verification link."),
-            type = "message", duration = 6)
+      # Auto-verify immediately — email verification requires a paid Resend
+      # plan with a verified domain. Enable this block once domain is verified.
+      sl_verify_user(con, email)
+      user <- sl_get_user_by_email(con, email)
+      if (role == "admin") {
+        showNotification(
+          paste0("Welcome, ", first, "! You are the project admin."),
+          type = "message", duration = 5)
+      } else {
+        showNotification(
+          paste0("Welcome, ", first, "! You've joined the project."),
+          type = "message", duration = 3)
+      }
+      launch_app(user)
         } else {
           # Email failed — auto-verify so user isn't stuck
           sl_verify_user(con, email)
