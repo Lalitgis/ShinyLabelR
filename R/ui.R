@@ -13,12 +13,14 @@ sl_ui <- function() {
       tags$script(src = "js/shiny_handlers.js"),
       tags$title("ShinyLabelR — R Annotation Tool"),
 
-      # Inline CSS to guarantee correct initial screen visibility
-      # regardless of what style.css says
-      tags$style(HTML("
-        .auth-screen { display: none !important; }
-        #screen-signin { display: flex !important; }
-        #main-app { display: none !important; }
+      # On startup: show only sign-in screen. CSS hides all .auth-screen by default;
+      # we add .auth-screen-active to screen-signin via JS after DOM is ready.
+      tags$script(HTML("
+        document.addEventListener('DOMContentLoaded', function() {
+          // Show sign-in as the default landing screen
+          var el = document.getElementById('screen-signin');
+          if (el) el.classList.add('auth-screen-active');
+        });
       "))
     ),
 
