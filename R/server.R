@@ -1002,3 +1002,4 @@ sl_server <- function(db_path = "shinylabel.db") {
 
   } # end server
 }
+}
