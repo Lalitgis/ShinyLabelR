@@ -39,20 +39,10 @@ sl_server <- function(db_path = "shinylabel.db") {
                           "screen-reset","screen-check-email")
 
     show_screen <- function(id) {
-      # Hide all auth screens and main-app via JS directly
-      # This works reliably regardless of how CSS initially sets display
-      all_ids <- c(all_auth_screens, "main-app")
-      for (s in all_ids) {
-        shinyjs::runjs(sprintf(
-          "document.getElementById('%s').style.setProperty('display','none','important');", s
-        ))
-      }
-      # Show the target — auth screens use flex, main-app uses block
-      display_val <- if (id == "main-app") "block" else "flex"
-      shinyjs::runjs(sprintf(
-        "document.getElementById('%s').style.setProperty('display','%s','important');",
-        id, display_val
-      ))
+      # Delegate entirely to switchAuth() in JS — it handles all 5 auth screens
+      # plus main-app via CSS class toggling. Single source of truth.
+      screen_name <- sub("^screen-", "", id)  # "screen-signin" -> "signin", "main-app" stays
+      shinyjs::runjs(sprintf("switchAuth('%s');", screen_name))
     }
 
     is_admin  <- reactive({ rv$user_role == "admin" })
