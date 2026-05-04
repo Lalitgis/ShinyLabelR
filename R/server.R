@@ -173,6 +173,8 @@ sl_server <- function(db_path = "shinylabel.db") {
         paste0("Welcome back, ", user$first_name, "!"),
         type = "message", duration = 3)
 
+      launch_app(user)   # FIX 1: was missing — sign-in never launched the app
+    })                   # FIX 1: closing }) for btn_signin was missing
 
     # ════════════════════════════════════════════════════════════════════════
     # REGISTER
@@ -259,8 +261,7 @@ sl_server <- function(db_path = "shinylabel.db") {
       # Send verification email
       verify_token <- sl_create_token(con, "verify", email, hours_valid = 24L)
 
-      # Auto-verify immediately — email verification requires a paid Resend
-      # plan with a verified domain. Enable this block once domain is verified.
+      # Auto-verify immediately
       sl_verify_user(con, email)
       user <- sl_get_user_by_email(con, email)
       if (role == "admin") {
@@ -722,8 +723,8 @@ sl_server <- function(db_path = "shinylabel.db") {
                         tags$td(style="padding:6px 8px;font-size:12px;color:var(--text-primary);", r$email),
                         tags$td(style="padding:6px 8px;font-size:11px;color:var(--text-muted);", substr(r$created_at %||% "—", 1, 16)),
                         tags$td(style="padding:6px 8px;",
-                          if (is_used) span(class="sl-badge sl-badge-success","Joined")
-                          else span(class="sl-badge sl-badge-accent","Pending"))
+                          if (is_used) span(class="sl-badge sl-badge-success", "Joined")
+                          else span(class="sl-badge sl-badge-accent", "Pending"))
                       )
                     }))
                   )
@@ -811,7 +812,7 @@ sl_server <- function(db_path = "shinylabel.db") {
     output$navbar_user <- renderUI({
       req(rv$user)
       tagList(
-        if (rv$user_role=="admin") span(class="sl-badge sl-badge-warning","Admin"),
+        if (rv$user_role == "admin") span(class="sl-badge sl-badge-warning", "Admin"),
         span(class="sl-badge sl-badge-accent", rv$annotator))
     })
 
@@ -824,11 +825,12 @@ sl_server <- function(db_path = "shinylabel.db") {
       tags$ul(class="sl-image-list",
         lapply(seq_len(nrow(imgs)), function(i) {
           img<-imgs[i,]; done<-!is.na(img$status)&&img$status=="done"
-          tags$li(class=paste("sl-image-item",if(i==rv$current_idx)"active" else "",if(done)"done" else "todo"),
+          tags$li(
+            class = paste("sl-image-item", if (i == rv$current_idx) "active" else "", if (done) "done" else "todo"),
             onclick=sprintf("Shiny.setInputValue('img_list_click',%d,{priority:'event'});",i),
-            span(class="sl-img-status",if(done)"✓" else "○"),
-            span(class="sl-img-name",img$filename),
-            span(class="sl-img-count",paste0(img$box_count,"b")))
+            span(class="sl-img-status", if (done) "✓" else "○"),
+            span(class="sl-img-name", img$filename),
+            span(class="sl-img-count", paste0(img$box_count,"b")))
         }))
     })
 
@@ -836,7 +838,7 @@ sl_server <- function(db_path = "shinylabel.db") {
 
     output$img_counter_ui <- renderUI(
       span(class="sl-img-counter",
-           if(nrow(rv$images)==0L)"—/—" else paste0(rv$current_idx,"/",nrow(rv$images))))
+           if (nrow(rv$images) == 0L) "—/—" else paste0(rv$current_idx,"/",nrow(rv$images))))
 
     output$class_empty_state <- renderUI({
       if(nrow(rv$classes)>0L) return(NULL)
@@ -869,11 +871,12 @@ sl_server <- function(db_path = "shinylabel.db") {
           cr<-cls[i,]; is_active<-!is.null(active_id)&&!is.na(cr$class_id)&&cr$class_id==active_id
           cn<-as.character(cr$class_name)
           total<-as.integer(max(0L,(db_all_map[cn]%||%0L)-(db_cur_map[cn]%||%0L)+(canvas_map[cn]%||%0L)))
-          div(class=paste("sl-class-item",if(is_active)"active" else ""),
+          div(
+            class = paste("sl-class-item", if (is_active) "active" else ""),   # FIX 2
             onclick=sprintf("Shiny.setInputValue('class_click',%d,{priority:'event'});",as.integer(cr$class_id)),
             div(class="sl-class-dot",style=paste0("background:",cr$color_hex,";")),
             span(class="sl-class-name",cn),
-            span(class=paste("sl-class-count",if(total>0L)"has-annotations" else ""),total))
+            span(class = paste("sl-class-count", if (total > 0L) "has-annotations" else ""), total))  # FIX 3
         }))
     })
 
@@ -903,8 +906,8 @@ sl_server <- function(db_path = "shinylabel.db") {
     })
 
     output$box_count_badge <- renderUI({
-      n<-length(rv$canvas_boxes)
-      span(class=if(n>0L)"sl-badge sl-badge-success" else "sl-badge sl-badge-accent",n)
+      n <- length(rv$canvas_boxes)
+      span(class = if (n > 0L) "sl-badge sl-badge-success" else "sl-badge sl-badge-accent", n)  # FIX 4
     })
 
     output$canvas_status_ui <- renderUI({
@@ -916,7 +919,7 @@ sl_server <- function(db_path = "shinylabel.db") {
         span(style="margin:0 10px;color:var(--border);","|"),
         span(paste0(as.integer(img[["img_width"]]%||%0L)," × ",as.integer(img[["img_height"]]%||%0L)," px")),
         span(style="margin:0 10px;color:var(--border);","|"),
-        span(paste0(n," box",if(n!=1L)"es" else "")),
+        span(paste0(n, " box", if (n != 1L) "es" else "")),   # FIX 5
         span(style="margin:0 10px;color:var(--border);","|"),
         span(style="color:var(--accent);",paste0("Class: ",as.character(rv$active_class$name%||%"none")))
       )
@@ -995,11 +998,10 @@ sl_server <- function(db_path = "shinylabel.db") {
     })
 
     output$todo_count_badge <- renderUI({
-      n<-sum(rv$images$status=="unannotated",na.rm=TRUE)
-      span(class=if(n>0L)"sl-badge sl-badge-warning" else "sl-badge sl-badge-success",
-           paste0(n," remaining"))
+      n <- sum(rv$images$status == "unannotated", na.rm = TRUE)
+      span(class = if (n > 0L) "sl-badge sl-badge-warning" else "sl-badge sl-badge-success",  # FIX 6
+           paste0(n, " remaining"))
     })
 
-  } # end server
-}
-}
+  } # end inner server function
+} # end sl_server
