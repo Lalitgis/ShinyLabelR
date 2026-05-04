@@ -139,6 +139,14 @@ sl_server <- function(db_path = "shinylabel.db") {
         showNotification("Please enter your password.", type = "error"); return()
       }
 
+      # No users yet — tell them to register first
+      if (sl_user_count(con) == 0L) {
+        showNotification(
+          "No accounts exist yet. Click 'Create one' to register as the first admin.",
+          type = "warning", duration = 7)
+        return()
+      }
+
       user <- sl_verify_login(con, email, password)
 
       if (is.null(user)) {
@@ -146,6 +154,12 @@ sl_server <- function(db_path = "shinylabel.db") {
           "Incorrect email or password. Please try again.",
           type = "error", duration = 5)
         return()
+      }
+
+      # Auto-verify if email service not configured (shinyapps.io SQLite mode)
+      if (user$verified == 0L && !resend_ok) {
+        sl_verify_user(con, email)
+        user$verified <- 1L
       }
 
       if (user$verified == 0L) {
