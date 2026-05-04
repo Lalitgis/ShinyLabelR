@@ -172,8 +172,7 @@ sl_server <- function(db_path = "shinylabel.db") {
       showNotification(
         paste0("Welcome back, ", user$first_name, "!"),
         type = "message", duration = 3)
-      launch_app(user)
-    })
+
 
     # ════════════════════════════════════════════════════════════════════════
     # REGISTER
@@ -274,29 +273,6 @@ sl_server <- function(db_path = "shinylabel.db") {
           type = "message", duration = 3)
       }
       launch_app(user)
-        } else {
-          # Email failed — auto-verify so user isn't stuck
-          sl_verify_user(con, email)
-          user <- sl_get_user_by_email(con, email)
-          showNotification(
-            paste0("Account created! Email service unavailable — signing you in directly."),
-            type = "warning", duration = 5)
-          launch_app(user)
-        }
-      } else {
-        # No Resend key — auto-verify
-        sl_verify_user(con, email)
-        user <- sl_get_user_by_email(con, email)
-        if (role == "admin") {
-          showNotification(
-            paste0("Welcome, ", first, "! You are the project admin."),
-            type = "message", duration = 5)
-        } else {
-          showNotification(paste0("Welcome, ", first, "!"),
-                           type = "message", duration = 3)
-        }
-        launch_app(user)
-      }
     })
 
     # ════════════════════════════════════════════════════════════════════════
