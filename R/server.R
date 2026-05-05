@@ -39,10 +39,20 @@ sl_server <- function(db_path = "shinylabel.db") {
                           "screen-reset","screen-check-email")
 
     show_screen <- function(id) {
-      # Delegate entirely to switchAuth() in JS — it handles all 5 auth screens
-      # plus main-app via CSS class toggling. Single source of truth.
-      screen_name <- sub("^screen-", "", id)  # "screen-signin" -> "signin", "main-app" stays
-      shinyjs::runjs(sprintf("switchAuth('%s');", screen_name))
+      # Hide all auth screens and main-app via JS directly
+      # This works reliably regardless of how CSS initially sets display
+      all_ids <- c(all_auth_screens, "main-app")
+      for (s in all_ids) {
+        shinyjs::runjs(sprintf(
+          "document.getElementById('%s').style.setProperty('display','none','important');", s
+        ))
+      }
+      # Show the target — auth screens use flex, main-app uses block
+      display_val <- if (id == "main-app") "block" else "flex"
+      shinyjs::runjs(sprintf(
+        "document.getElementById('%s').style.setProperty('display','%s','important');",
+        id, display_val
+      ))
     }
 
     is_admin  <- reactive({ rv$user_role == "admin" })
@@ -131,8 +141,8 @@ sl_server <- function(db_path = "shinylabel.db") {
     # SIGN IN
     # ════════════════════════════════════════════════════════════════════════
     observeEvent(input$btn_signin, {
-      email    <- tolower(trimws(input$signin_email))
-      password <- input$signin_password
+      email    <- tolower(trimws(input$signin_email    %||% ""))
+      password <- input$signin_password %||% ""
 
       if (!nzchar(email) || !grepl("@", email)) {
         showNotification("Please enter a valid email.", type = "error"); return()
@@ -182,11 +192,15 @@ sl_server <- function(db_path = "shinylabel.db") {
     # REGISTER
     # ════════════════════════════════════════════════════════════════════════
     observeEvent(input$btn_register, {
-      first  <- trimws(input$reg_first_name)
-      last   <- trimws(input$reg_last_name)
-      email  <- tolower(trimws(input$reg_email))
-      pass1  <- input$reg_password
-      pass2  <- input$reg_password2
+      first <- trimws(input$reg_first_name %||% "")
+      last  <- trimws(input$reg_last_name  %||% "")
+      email <- tolower(trimws(input$reg_email %||% ""))
+
+      # BUG FIX: raw tags$input returns NULL until typed — coerce to "" first
+      # nchar(NULL) = integer(0), integer(0) < 8 = logical(0),
+      # if(logical(0)) → "argument is of length zero" → server crash
+      pass1 <- input$reg_password  %||% ""
+      pass2 <- input$reg_password2 %||% ""
 
       # Validate all fields
       if (!nzchar(first)) {
@@ -198,10 +212,11 @@ sl_server <- function(db_path = "shinylabel.db") {
       if (!nzchar(email) || !grepl("@", email)) {
         showNotification("Please enter a valid email address.", type = "error"); return()
       }
-      if (nchar(pass1) < 8) {
+      # BUG FIX: check nzchar before nchar — avoids integer(0) crash
+      if (!nzchar(pass1) || nchar(pass1) < 8L) {
         showNotification("Password must be at least 8 characters.", type = "error"); return()
       }
-      if (!identical(pass1, pass2)) {
+      if (!nzchar(pass2) || !identical(pass1, pass2)) {
         showNotification("Passwords do not match.", type = "error"); return()
       }
 
@@ -215,18 +230,13 @@ sl_server <- function(db_path = "shinylabel.db") {
         return()
       }
 
-      # Check for valid invite token if this is NOT the first user
       user_count <- sl_user_count(con)
       invite_token_row <- NULL
 
-      if (user_count > 0L) {
-        # Not the first user — need a valid invite token
-        # Check if the email has a pending invite
-        invite_token_row <- tryCatch(
-          sl_validate_token(con, "", "invite"),  # will be NULL
-          error = function(e) NULL)
+      # BUG FIX: invite gate — check env var OPEN_REGISTRATION to bypass for solo/demo use
+      open_reg <- identical(toupper(Sys.getenv("OPEN_REGISTRATION")), "TRUE")
 
-        # Actually check by email
+      if (user_count > 0L && !open_reg) {
         inv_check <- DBI::dbGetQuery(con,
           "SELECT * FROM email_tokens
            WHERE type='invite' AND email=? AND used_at IS NULL
@@ -236,45 +246,48 @@ sl_server <- function(db_path = "shinylabel.db") {
 
         if (nrow(inv_check) == 0L) {
           showNotification(
-            paste0("This email was not invited. Ask your project admin to invite ",
+            paste0("Registration requires an invite. Ask the admin to invite ",
                    email, " from the Team tab."),
             type = "error", duration = 8)
           return()
         }
-        invite_token_row <- as.list(inv_check[1, ])
+        invite_token_row <- as.list(inv_check[1L, ])
       }
 
-      # Determine role
       role <- if (user_count == 0L) "admin" else "annotator"
 
-      # Create user
-      tryCatch({
+      # BUG FIX: tryCatch return() only exits the error handler, NOT observeEvent
+      # Use a flag so we can properly abort if user creation fails
+      ok <- tryCatch({
         sl_create_user(con, first, last, email, pass1, role)
+        TRUE
       }, error = function(e) {
-        showNotification(paste("Failed to create account:", e$message),
-                         type = "error"); return()
+        showNotification(paste("Failed to create account:", e$message), type = "error")
+        FALSE
       })
+      if (!ok) return()   # now this actually stops execution
 
-      # Mark invite as used
-      if (!is.null(invite_token_row)) {
+      if (!is.null(invite_token_row))
         sl_use_token(con, invite_token_row$token)
-      }
 
-      # Send verification email
-      verify_token <- sl_create_token(con, "verify", email, hours_valid = 24L)
-
-      # Auto-verify immediately
+      # Auto-verify (email service optional)
+      tryCatch(sl_create_token(con, "verify", email, hours_valid = 24L),
+               error = function(e) NULL)
       sl_verify_user(con, email)
+
       user <- sl_get_user_by_email(con, email)
-      if (role == "admin") {
-        showNotification(
-          paste0("Welcome, ", first, "! You are the project admin."),
-          type = "message", duration = 5)
-      } else {
-        showNotification(
-          paste0("Welcome, ", first, "! You've joined the project."),
-          type = "message", duration = 3)
+      if (is.null(user)) {
+        showNotification("Account created but could not load user. Please sign in.",
+                         type = "warning"); return()
       }
+
+      showNotification(
+        if (role == "admin")
+          paste0("Welcome, ", first, "! You are the project admin.")
+        else
+          paste0("Welcome, ", first, "! You've joined the project."),
+        type = "message", duration = 5)
+
       launch_app(user)
     })
 
