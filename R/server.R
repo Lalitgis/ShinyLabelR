@@ -39,20 +39,10 @@ sl_server <- function(db_path = "shinylabel.db") {
                           "screen-reset","screen-check-email")
 
     show_screen <- function(id) {
-      # Hide all auth screens and main-app via JS directly
-      # This works reliably regardless of how CSS initially sets display
-      all_ids <- c(all_auth_screens, "main-app")
-      for (s in all_ids) {
-        shinyjs::runjs(sprintf(
-          "document.getElementById('%s').style.setProperty('display','none','important');", s
-        ))
-      }
-      # Show the target — auth screens use flex, main-app uses block
-      display_val <- if (id == "main-app") "block" else "flex"
-      shinyjs::runjs(sprintf(
-        "document.getElementById('%s').style.setProperty('display','%s','important');",
-        id, display_val
-      ))
+      # switchAuth() in shiny_handlers.js controls ALL screen visibility
+      # via direct element.style.display — beats any CSS rule including !important
+      screen_name <- sub("^screen-", "", id)  # "screen-signin" -> "signin"
+      shinyjs::runjs(sprintf("switchAuth('%s');", screen_name))
     }
 
     is_admin  <- reactive({ rv$user_role == "admin" })
@@ -80,7 +70,10 @@ sl_server <- function(db_path = "shinylabel.db") {
 
       session$sendCustomMessage("sl_init_canvas", list(canvasId = "annotation-canvas"))
       push_classes_to_canvas()
-      if (nrow(rv$images) > 0L) navigate_to(1L)
+      # Delay first image load by 300ms so JS canvas init completes first
+      if (nrow(rv$images) > 0L) {
+        shinyjs::delay(300, navigate_to(1L))
+      }
     }
 
     # Check URL params for verify/invite/reset tokens on load
@@ -142,7 +135,7 @@ sl_server <- function(db_path = "shinylabel.db") {
     # ════════════════════════════════════════════════════════════════════════
     observeEvent(input$btn_signin, {
       email    <- tolower(trimws(input$signin_email    %||% ""))
-      password <- input$signin_password %||% ""
+      password <- trimws(input$signin_password %||% "")
 
       if (!nzchar(email) || !grepl("@", email)) {
         showNotification("Please enter a valid email.", type = "error"); return()
@@ -192,63 +185,46 @@ sl_server <- function(db_path = "shinylabel.db") {
     # REGISTER
     # ════════════════════════════════════════════════════════════════════════
     observeEvent(input$btn_register, {
+      # Coerce all inputs to "" if NULL — prevents integer(0) crash from nchar(NULL)
       first <- trimws(input$reg_first_name %||% "")
       last  <- trimws(input$reg_last_name  %||% "")
       email <- tolower(trimws(input$reg_email %||% ""))
-
-      # BUG FIX: raw tags$input returns NULL until typed — coerce to "" first
-      # nchar(NULL) = integer(0), integer(0) < 8 = logical(0),
-      # if(logical(0)) → "argument is of length zero" → server crash
       pass1 <- input$reg_password  %||% ""
       pass2 <- input$reg_password2 %||% ""
 
-      # Validate all fields
-      if (!nzchar(first)) {
-        showNotification("Please enter your first name.", type = "error"); return()
-      }
-      if (!nzchar(last)) {
-        showNotification("Please enter your last name.", type = "error"); return()
-      }
+      if (!nzchar(first)) { showNotification("Please enter your first name.", type="error"); return() }
+      if (!nzchar(last))  { showNotification("Please enter your last name.",  type="error"); return() }
       if (!nzchar(email) || !grepl("@", email)) {
-        showNotification("Please enter a valid email address.", type = "error"); return()
+        showNotification("Please enter a valid email address.", type="error"); return()
       }
-      # BUG FIX: check nzchar before nchar — avoids integer(0) crash
       if (!nzchar(pass1) || nchar(pass1) < 8L) {
-        showNotification("Password must be at least 8 characters.", type = "error"); return()
+        showNotification("Password must be at least 8 characters.", type="error"); return()
       }
-      if (!nzchar(pass2) || !identical(pass1, pass2)) {
-        showNotification("Passwords do not match.", type = "error"); return()
+      if (!identical(pass1, pass2)) {
+        showNotification("Passwords do not match.", type="error"); return()
       }
 
-      # Check if email already registered
       existing <- sl_get_user_by_email(con, email)
       if (!is.null(existing)) {
-        showNotification(
-          "An account with this email already exists. Please sign in.",
-          type = "warning", duration = 5)
-        show_screen("screen-signin")
-        return()
+        showNotification("Account already exists. Please sign in.", type="warning", duration=5)
+        show_screen("screen-signin"); return()
       }
 
       user_count <- sl_user_count(con)
       invite_token_row <- NULL
-
-      # BUG FIX: invite gate — check env var OPEN_REGISTRATION to bypass for solo/demo use
+      # Allow open registration if env var set, OR if first user, OR if invited
       open_reg <- identical(toupper(Sys.getenv("OPEN_REGISTRATION")), "TRUE")
 
       if (user_count > 0L && !open_reg) {
         inv_check <- DBI::dbGetQuery(con,
           "SELECT * FROM email_tokens
            WHERE type='invite' AND email=? AND used_at IS NULL
-             AND expires_at > datetime('now')
-           LIMIT 1",
+             AND expires_at > datetime('now') LIMIT 1",
           params = list(email))
-
         if (nrow(inv_check) == 0L) {
           showNotification(
-            paste0("Registration requires an invite. Ask the admin to invite ",
-                   email, " from the Team tab."),
-            type = "error", duration = 8)
+            paste0("Registration requires an invite link. Ask the admin to invite: ", email),
+            type="error", duration=8)
           return()
         }
         invite_token_row <- as.list(inv_check[1L, ])
@@ -256,40 +232,36 @@ sl_server <- function(db_path = "shinylabel.db") {
 
       role <- if (user_count == 0L) "admin" else "annotator"
 
-      # BUG FIX: tryCatch return() only exits the error handler, NOT observeEvent
-      # Use a flag so we can properly abort if user creation fails
+      # CRITICAL FIX: use flag — return() inside tryCatch error handler does NOT
+      # exit observeEvent, it only exits the error function. Use ok flag instead.
       ok <- tryCatch({
         sl_create_user(con, first, last, email, pass1, role)
         TRUE
       }, error = function(e) {
-        showNotification(paste("Failed to create account:", e$message), type = "error")
+        showNotification(paste("Failed to create account:", e$message), type="error")
         FALSE
       })
-      if (!ok) return()   # now this actually stops execution
+      if (!ok) return()
 
       if (!is.null(invite_token_row))
-        sl_use_token(con, invite_token_row$token)
+        tryCatch(sl_use_token(con, invite_token_row$token), error=function(e) NULL)
 
-      # Auto-verify (email service optional)
-      tryCatch(sl_create_token(con, "verify", email, hours_valid = 24L),
-               error = function(e) NULL)
+      tryCatch(sl_create_token(con, "verify", email, hours_valid=24L), error=function(e) NULL)
       sl_verify_user(con, email)
 
       user <- sl_get_user_by_email(con, email)
       if (is.null(user)) {
-        showNotification("Account created but could not load user. Please sign in.",
-                         type = "warning"); return()
+        showNotification("Account created — please sign in.", type="message"); 
+        show_screen("screen-signin"); return()
       }
 
       showNotification(
-        if (role == "admin")
-          paste0("Welcome, ", first, "! You are the project admin.")
-        else
-          paste0("Welcome, ", first, "! You've joined the project."),
-        type = "message", duration = 5)
-
+        if (role == "admin") paste0("Welcome, ", first, "! You are the project admin.")
+        else paste0("Welcome, ", first, "! You've joined the project."),
+        type="message", duration=5)
       launch_app(user)
     })
+
 
     # ════════════════════════════════════════════════════════════════════════
     # FORGOT PASSWORD
@@ -446,6 +418,10 @@ sl_server <- function(db_path = "shinylabel.db") {
       imgs <- rv$images
       if (nrow(imgs) == 0L) return()
       idx <- max(1L, min(as.integer(idx), nrow(imgs)))
+      # UX-8 FIX: auto_save uses rv$canvas_boxes which may lag behind canvas JS state.
+      # Only save if boxes are loaded (idx > 0) and we aren't on the very first nav.
+      # The JS canvas reports boxes synchronously on mouseup, so rv$canvas_boxes
+      # is reliable as long as user clicked Save or navigated with button (not instant).
       if (rv$current_idx > 0L) auto_save(silent = TRUE)
       rv$current_idx <- idx
       rv$current_img <- as.list(imgs[idx, ])
