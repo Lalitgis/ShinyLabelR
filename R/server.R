@@ -24,14 +24,10 @@ sl_server <- function(db_path = "shinylabel.db") {
 
     # ── Screen switcher ────────────────────────────────────────────────────────
     show_screen <- function(id) {
-      shinyjs::runjs(sprintf(
-        'document.getElementById("screen-name").style.display="none";
-         document.getElementById("main-app").style.display="%s";',
-        if (id == "main-app") "block" else "none"
-      ))
-      if (id == "screen-name") {
-        shinyjs::runjs('document.getElementById("screen-name").style.display="flex";')
-      }
+      # Delegate to switchAuth() in shiny_handlers.js
+      # which correctly toggles screen-name vs main-app
+      screen_name <- sub("^screen-", "", id)  # "screen-name" -> "name", "main-app" stays
+      shinyjs::runjs(sprintf("switchAuth('%s');", screen_name))
     }
 
     # ── Enter app with just a name ─────────────────────────────────────────────
