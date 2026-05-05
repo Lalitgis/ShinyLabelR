@@ -12,73 +12,35 @@ sl_ui <- function() {
       tags$script(src = "js/canvas.js"),
       tags$script(src = "js/shiny_handlers.js"),
       tags$title("ShinyLabelR — R Annotation Tool"),
-
-      # Enter key submits the active auth form
+      # Enter key submits the name form
       tags$script(HTML("
-        // Enter key submits visible auth form
         document.addEventListener('keydown', function(e) {
-          if (e.key !== 'Enter') return;
-          var screens = ['screen-signin','screen-register','screen-forgot'];
-          var btns    = ['btn_signin',   'btn_register',   'btn_forgot'];
-          for (var i = 0; i < screens.length; i++) {
-            var el = document.getElementById(screens[i]);
-            if (el && el.style.display !== 'none' && el.style.display !== '') {
-              var btn = document.getElementById(btns[i]);
-              if (btn) btn.click();
-              break;
+          if (e.key === 'Enter') {
+            var screen = document.getElementById('screen-name');
+            if (screen && screen.style.display !== 'none') {
+              document.getElementById('btn_enter').click();
             }
           }
-        });
-        // Disable browser native HTML5 validation on all auth cards
-        // (prevents cross-screen 'Please enter valid email' popups)
-        document.addEventListener('DOMContentLoaded', function() {
-          document.querySelectorAll('.auth-card').forEach(function(card) {
-            var inputs = card.querySelectorAll('input');
-            inputs.forEach(function(inp) { inp.setAttribute('novalidate', ''); });
-          });
-          // Also suppress any form elements
-          document.querySelectorAll('form').forEach(function(f) {
-            f.setAttribute('novalidate', 'true');
-          });
         });
       "))
     ),
 
-    # ══ SCREEN: SIGN IN ═══════════════════════════════════════════════════════
-    div(id = "screen-signin", class = "auth-screen", style = "display:flex;",
+    # ══ ENTRY SCREEN — just enter your name ═══════════════════════════════════
+    div(id = "screen-name", class = "auth-screen", style = "display:flex;",
       div(class = "auth-card",
         div(class = "auth-logo",
           div(class = "auth-logo-mark", "SL"),
           span("ShinyLabelR")
         ),
-        h1(class = "auth-title", "Sign in"),
-        p(class = "auth-subtitle",
-          "Don't have an account? ",
-          tags$a(href = "#", class = "auth-link",
-                 onclick = "switchAuth('register');return false;",
-                 "Create one →")
-        ),
+        h1(class = "auth-title", "Welcome"),
+        p(class = "auth-subtitle", "Enter your name to start annotating."),
         div(class = "auth-field",
-          tags$label("Email address", class = "sl-form-label"),
-          tagAppendAttributes(
-            textInput("signin_email", NULL, placeholder = "you@example.com", width = "100%"),
-            autocomplete = "email"
-          )
+          tags$label("Your name", class = "sl-form-label"),
+          textInput("user_name", NULL,
+                    placeholder = "e.g. Alice Chen",
+                    width = "100%")
         ),
-        div(class = "auth-field",
-          tags$label("Password", class = "sl-form-label"),
-          tagAppendAttributes(
-            passwordInput("signin_password", NULL, placeholder = "Your password", width = "100%"),
-            autocomplete = "current-password"
-          )
-        ),
-        div(style = "text-align:right;margin-bottom:20px;",
-          tags$a(href = "#", class = "auth-link",
-                 style = "font-size:12px;",
-                 onclick = "switchAuth('forgot');return false;",
-                 "Forgot password?")
-        ),
-        actionButton("btn_signin", "Sign in →",
+        actionButton("btn_enter", "Start annotating →",
                      class = "sl-btn sl-btn-primary auth-submit"),
         div(style = "margin-top:20px;text-align:center;",
           tags$label(class = "sl-toggle-wrap",
@@ -96,141 +58,10 @@ sl_ui <- function() {
       )
     ),
 
-    # ══ SCREEN: CREATE ACCOUNT ════════════════════════════════════════════════
-    div(id = "screen-register", class = "auth-screen", style = "display:none;",
-      div(class = "auth-card",
-        div(class = "auth-logo",
-          div(class = "auth-logo-mark", "SL"),
-          span("ShinyLabelR")
-        ),
-        h1(class = "auth-title", "Create account"),
-        p(class = "auth-subtitle",
-          "Already have an account? ",
-          tags$a(href = "#", class = "auth-link",
-                 onclick = "switchAuth('signin');return false;",
-                 "Sign in →")
-        ),
-
-        div(class = "auth-info-banner",
-          span(class = "auth-info-icon", "ℹ"),
-          div(
-            tags$strong("First person to register becomes the admin."),
-            tags$br(),
-            span(style = "font-size:12px;",
-                 "Team members need an invite link sent by the admin.")
-          )
-        ),
-
-        div(style = "display:flex;gap:12px;",
-          div(class = "auth-field", style = "flex:1;",
-            tags$label("First name", class = "sl-form-label"),
-            textInput("reg_first_name", NULL,
-                      placeholder = "Alice", width = "100%")
-          ),
-          div(class = "auth-field", style = "flex:1;",
-            tags$label("Last name", class = "sl-form-label"),
-            textInput("reg_last_name", NULL,
-                      placeholder = "Chen", width = "100%")
-          )
-        ),
-        div(class = "auth-field",
-          tags$label("Email address", class = "sl-form-label"),
-          tagAppendAttributes(
-            textInput("reg_email", NULL, placeholder = "you@example.com", width = "100%"),
-            autocomplete = "email"
-          )
-        ),
-        div(class = "auth-field",
-          tags$label("Password", class = "sl-form-label"),
-          tagAppendAttributes(
-            passwordInput("reg_password", NULL, placeholder = "At least 8 characters", width = "100%"),
-            autocomplete = "new-password"
-          )
-        ),
-        div(class = "auth-field",
-          tags$label("Confirm password", class = "sl-form-label"),
-          tagAppendAttributes(
-            passwordInput("reg_password2", NULL, placeholder = "Repeat your password", width = "100%"),
-            autocomplete = "new-password"
-          )
-        ),
-        actionButton("btn_register", "Create account",
-                     class = "sl-btn sl-btn-primary auth-submit"),
-        div(style = "margin-top:14px;text-align:center;",
-          tags$a(href = "#", style = "font-size:13px;color:var(--text-muted);",
-                 onclick = "switchAuth('signin');return false;",
-                 "← Back to sign in")
-        )
-      )
-    ),
-
-    # ══ SCREEN: FORGOT PASSWORD ═══════════════════════════════════════════════
-    div(id = "screen-forgot", class = "auth-screen", style = "display:none;",
-      div(class = "auth-card",
-        div(class = "auth-logo",
-          div(class = "auth-logo-mark", "SL"),
-          span("ShinyLabelR")
-        ),
-        h1(class = "auth-title", "Reset password"),
-        p(class = "auth-subtitle",
-          "Enter your email and we'll send you a reset link."),
-        div(class = "auth-field",
-          tags$label("Email address", class = "sl-form-label"),
-          textInput("forgot_email", NULL,
-                    placeholder = "you@example.com", width = "100%")
-        ),
-        actionButton("btn_forgot", "Send reset link",
-                     class = "sl-btn sl-btn-primary auth-submit"),
-        div(style = "margin-top:14px;text-align:center;",
-          tags$a(href = "#", style = "font-size:13px;color:var(--text-muted);",
-                 onclick = "switchAuth('signin');return false;",
-                 "← Back to sign in")
-        )
-      )
-    ),
-
-    # ══ SCREEN: RESET PASSWORD ════════════════════════════════════════════════
-    div(id = "screen-reset", class = "auth-screen", style = "display:none;",
-      div(class = "auth-card",
-        div(class = "auth-logo",
-          div(class = "auth-logo-mark", "SL"),
-          span("ShinyLabelR")
-        ),
-        h1(class = "auth-title", "Set new password"),
-        p(class = "auth-subtitle", "Choose a strong new password."),
-        div(class = "auth-field",
-          tags$label("New password", class = "sl-form-label"),
-          passwordInput("reset_password", NULL,
-                        placeholder = "At least 8 characters", width = "100%")
-        ),
-        div(class = "auth-field",
-          tags$label("Confirm password", class = "sl-form-label"),
-          passwordInput("reset_password2", NULL,
-                        placeholder = "Repeat your password", width = "100%")
-        ),
-        actionButton("btn_reset_password", "Update password",
-                     class = "sl-btn sl-btn-primary auth-submit")
-      )
-    ),
-
-    # ══ SCREEN: CHECK EMAIL ═══════════════════════════════════════════════════
-    div(id = "screen-check-email", class = "auth-screen", style = "display:none;",
-      div(class = "auth-card", style = "text-align:center;",
-        div(style = "font-size:48px;margin-bottom:16px;", "📬"),
-        h1(class = "auth-title", "Check your email"),
-        uiOutput("check_email_msg"),
-        div(style = "margin-top:24px;",
-          tags$a(href = "#", class = "auth-link", style = "font-size:13px;",
-                 onclick = "switchAuth('signin');return false;",
-                 "← Back to sign in")
-        )
-      )
-    ),
-
     # ══ MAIN APP ══════════════════════════════════════════════════════════════
     div(id = "main-app", style = "display:none;",
 
-      # ── Navbar ──────────────────────────────────────────────────────────
+      # ── Navbar ────────────────────────────────────────────────────────────
       div(class = "sl-navbar",
         div(class = "sl-navbar-brand",
           div(class = "sl-navbar-logo", "SL"),
@@ -241,9 +72,6 @@ sl_ui <- function() {
                       onclick = "switchTab('annotate')", "Annotate"),
           tags$button(class = "sl-nav-tab", id = "tab-btn-export",
                       onclick = "switchTab('export')", "Export"),
-          tags$button(class = "sl-nav-tab", id = "tab-btn-team",
-                      onclick = "switchTab('team');Shiny.setInputValue('load_team_tab',Math.random(),{priority:'event'});",
-                      "Team"),
           tags$button(class = "sl-nav-tab", id = "tab-btn-dashboard",
                       onclick = "switchTab('dashboard');Shiny.setInputValue('load_dashboard_tab',Math.random(),{priority:'event'});",
                       "Dashboard")
@@ -262,7 +90,7 @@ sl_ui <- function() {
         )
       ),
 
-      # ═══ ANNOTATE ═══════════════════════════════════════════════════════
+      # ═══ ANNOTATE ═══════════════════════════════════════════════════════════
       div(id = "tab-annotate", class = "sl-tab-panel active",
         div(class = "sl-layout",
 
@@ -393,7 +221,7 @@ sl_ui <- function() {
         )
       ), # end annotate
 
-      # ═══ EXPORT ══════════════════════════════════════════════════════════
+      # ═══ EXPORT ══════════════════════════════════════════════════════════════
       div(id = "tab-export", class = "sl-tab-panel",
         div(class = "sl-page-content",
           div(class = "sl-page-header",
@@ -441,28 +269,7 @@ sl_ui <- function() {
         )
       ), # end export
 
-      # ═══ TEAM ════════════════════════════════════════════════════════════
-      div(id = "tab-team", class = "sl-tab-panel",
-        div(class = "sl-page-content",
-          div(class = "sl-page-header",
-            h2(class = "sl-page-title", "Team"),
-            p(class = "sl-page-subtitle",
-              "Everyone who has joined this annotation project.")
-          ),
-          div(class = "sl-panel", style = "margin-bottom:18px;",
-            div(class = "sl-panel-header",
-              span(class = "sl-panel-title", "Members"),
-              uiOutput("team_member_count_badge")
-            ),
-            div(class = "sl-panel-body", style = "padding:0;",
-              uiOutput("team_members_table_ui")
-            )
-          ),
-          uiOutput("team_invite_panel")
-        )
-      ), # end team
-
-      # ═══ DASHBOARD ═══════════════════════════════════════════════════════
+      # ═══ DASHBOARD ═══════════════════════════════════════════════════════════
       div(id = "tab-dashboard", class = "sl-tab-panel",
         div(class = "sl-page-content",
           div(class = "sl-page-header",
@@ -495,15 +302,6 @@ sl_ui <- function() {
             ),
             div(class = "sl-panel-body",
               DT::dataTableOutput("tbl_annotators")
-            )
-          ),
-          div(class = "sl-panel", style = "margin-top:20px;",
-            div(class = "sl-panel-header",
-              span(class = "sl-panel-title", "Images Needing Annotation"),
-              uiOutput("todo_count_badge")
-            ),
-            div(class = "sl-panel-body",
-              DT::dataTableOutput("tbl_todo_images")
             )
           )
         )
