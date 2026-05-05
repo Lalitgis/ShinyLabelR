@@ -1021,15 +1021,7 @@ table.dataTable tbody tr:hover { background: var(--bg-hover) !important; }
                     rgba(79,142,247,0.08) 0%, transparent 70%);
 }
 
-/* Active auth screen — set by JS switchAuth() */
-.auth-screen.auth-screen-active {
-  display: flex !important;
-}
-
-/* Main app hidden until login */
-#main-app {
-  display: none;
-}
+/* Note: auth screen visibility is controlled via inline styles in ui.R + switchAuth() in JS */
 
 
 input[type="password"].form-control {
