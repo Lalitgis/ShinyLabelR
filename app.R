@@ -62,8 +62,26 @@ exports_dir <- file.path(tempdir(), "sl_exports")
 dir.create(exports_dir, showWarnings = FALSE, recursive = TRUE)
 shiny::addResourcePath("exports", exports_dir)
 
-# ── 6. Database ────────────────────────────────────────────────────────────────
-DB_PATH <- file.path(tempdir(), "shinylabel.db")
+# ── 6. Database — persistent path ─────────────────────────────────────────────
+# IMPORTANT: tempdir() is wiped when shinyapps.io sleeps → all accounts lost.
+# Use a stable path that survives restarts. On shinyapps.io /srv/connect persists.
+# Falls back to the working directory for local dev.
+DB_PATH <- tryCatch({
+  candidates <- c(
+    "/srv/connect/apps/ShinyLabelR",   # shinyapps.io persistent storage
+    normalizePath(".", mustWork = TRUE) # local dev fallback
+  )
+  for (d in candidates) {
+    if (dir.exists(d) && file.access(d, 2) == 0) { # 2 = write permission
+      path <- file.path(d, "shinylabel.db")
+      cat("[ShinyLabel] Using persistent DB at:", path, "\n")
+      return(path)
+    }
+  }
+  # Last resort: tempdir (accounts lost on restart)
+  warning("[ShinyLabel] WARNING: Using tempdir for DB — accounts will be lost on restart!")
+  file.path(tempdir(), "shinylabel.db")
+}, error = function(e) file.path(tempdir(), "shinylabel.db"))
 cat("[ShinyLabel] DB path:", DB_PATH, "\n")
 
 # ── 7. Launch ──────────────────────────────────────────────────────────────────
