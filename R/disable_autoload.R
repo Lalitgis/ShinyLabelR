@@ -1,4 +1,2 @@
-# disable_autoload.R
-# Presence of this file tells Shiny NOT to auto-source R/ alphabetically.
-# The actual option is also set in app.R for belt-and-suspenders reliability.
-options(shiny.autoload.r = FALSE)
+# Prevents Shiny from auto-sourcing R/ in alphabetical order.
+# Must be present in the app root directory.
