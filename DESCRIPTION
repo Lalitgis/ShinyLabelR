@@ -26,6 +26,8 @@ Imports:
     zip (>= 2.3.0),
     base64enc,
     fs,
-    tools
+    tools,
+    httr2,
+    digest
 Suggests:
     testthat (>= 3.0.0)
