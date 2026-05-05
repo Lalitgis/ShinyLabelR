@@ -15,6 +15,7 @@ sl_ui <- function() {
 
       # Enter key submits the active auth form
       tags$script(HTML("
+        // Enter key submits visible auth form
         document.addEventListener('keydown', function(e) {
           if (e.key !== 'Enter') return;
           var screens = ['screen-signin','screen-register','screen-forgot'];
@@ -27,6 +28,18 @@ sl_ui <- function() {
               break;
             }
           }
+        });
+        // Disable browser native HTML5 validation on all auth cards
+        // (prevents cross-screen 'Please enter valid email' popups)
+        document.addEventListener('DOMContentLoaded', function() {
+          document.querySelectorAll('.auth-card').forEach(function(card) {
+            var inputs = card.querySelectorAll('input');
+            inputs.forEach(function(inp) { inp.setAttribute('novalidate', ''); });
+          });
+          // Also suppress any form elements
+          document.querySelectorAll('form').forEach(function(f) {
+            f.setAttribute('novalidate', 'true');
+          });
         });
       "))
     ),
@@ -47,19 +60,17 @@ sl_ui <- function() {
         ),
         div(class = "auth-field",
           tags$label("Email address", class = "sl-form-label"),
-          tags$input(id = "signin_email", type = "email",
-                     class = "form-control shiny-bound-input",
-                     placeholder = "you@example.com",
-                     autocomplete = "email",
-                     style = "width:100%;")
+          tagAppendAttributes(
+            textInput("signin_email", NULL, placeholder = "you@example.com", width = "100%"),
+            autocomplete = "email"
+          )
         ),
         div(class = "auth-field",
           tags$label("Password", class = "sl-form-label"),
-          tags$input(id = "signin_password", type = "password",
-                     class = "form-control shiny-bound-input",
-                     placeholder = "Your password",
-                     autocomplete = "current-password",
-                     style = "width:100%;")
+          tagAppendAttributes(
+            passwordInput("signin_password", NULL, placeholder = "Your password", width = "100%"),
+            autocomplete = "current-password"
+          )
         ),
         div(style = "text-align:right;margin-bottom:20px;",
           tags$a(href = "#", class = "auth-link",
@@ -124,27 +135,24 @@ sl_ui <- function() {
         ),
         div(class = "auth-field",
           tags$label("Email address", class = "sl-form-label"),
-          tags$input(id = "reg_email", type = "email",
-                     class = "form-control shiny-bound-input",
-                     placeholder = "you@example.com",
-                     autocomplete = "email",
-                     style = "width:100%;")
+          tagAppendAttributes(
+            textInput("reg_email", NULL, placeholder = "you@example.com", width = "100%"),
+            autocomplete = "email"
+          )
         ),
         div(class = "auth-field",
           tags$label("Password", class = "sl-form-label"),
-          tags$input(id = "reg_password", type = "password",
-                     class = "form-control shiny-bound-input",
-                     placeholder = "At least 8 characters",
-                     autocomplete = "new-password",
-                     style = "width:100%;")
+          tagAppendAttributes(
+            passwordInput("reg_password", NULL, placeholder = "At least 8 characters", width = "100%"),
+            autocomplete = "new-password"
+          )
         ),
         div(class = "auth-field",
           tags$label("Confirm password", class = "sl-form-label"),
-          tags$input(id = "reg_password2", type = "password",
-                     class = "form-control shiny-bound-input",
-                     placeholder = "Repeat your password",
-                     autocomplete = "new-password",
-                     style = "width:100%;")
+          tagAppendAttributes(
+            passwordInput("reg_password2", NULL, placeholder = "Repeat your password", width = "100%"),
+            autocomplete = "new-password"
+          )
         ),
         actionButton("btn_register", "Create account",
                      class = "sl-btn sl-btn-primary auth-submit"),
@@ -192,17 +200,13 @@ sl_ui <- function() {
         p(class = "auth-subtitle", "Choose a strong new password."),
         div(class = "auth-field",
           tags$label("New password", class = "sl-form-label"),
-          tags$input(id = "reset_password", type = "password",
-                     class = "form-control",
-                     placeholder = "At least 8 characters",
-                     style = "width:100%;")
+          passwordInput("reset_password", NULL,
+                        placeholder = "At least 8 characters", width = "100%")
         ),
         div(class = "auth-field",
           tags$label("Confirm password", class = "sl-form-label"),
-          tags$input(id = "reset_password2", type = "password",
-                     class = "form-control",
-                     placeholder = "Repeat your password",
-                     style = "width:100%;")
+          passwordInput("reset_password2", NULL,
+                        placeholder = "Repeat your password", width = "100%")
         ),
         actionButton("btn_reset_password", "Update password",
                      class = "sl-btn sl-btn-primary auth-submit")
