@@ -11,12 +11,25 @@ sl_ui <- function() {
       tags$link(rel = "stylesheet", href = "css/style.css"),
       tags$script(src = "js/canvas.js"),
       tags$script(src = "js/shiny_handlers.js"),
-      tags$title("ShinyLabelR — R Annotation Tool")
+      tags$title("ShinyLabelR — R Annotation Tool"),
+
+      # Enter key submits the visible auth form
+      tags$script(HTML("
+        document.addEventListener('keydown', function(e) {
+          if (e.key !== 'Enter') return;
+          var active = document.querySelector('.auth-screen[style*=\"flex\"]');
+          if (!active) return;
+          var id = active.id;
+          if (id === 'screen-signin')   document.getElementById('btn_signin').click();
+          if (id === 'screen-register') document.getElementById('btn_register').click();
+          if (id === 'screen-forgot')   document.getElementById('btn_forgot').click();
+        });
+      "))
     ),
 
-    # ══ SCREEN: SIGN IN — visible by default (inline style, no CSS/JS dependency)
-    div(id = "screen-signin", class = "auth-screen",
-        style = "display:flex;",
+    # ══ SCREEN: SIGN IN ═══════════════════════════════════════════════════════
+    # style=display:flex makes this visible immediately — no CSS/JS race
+    div(id = "screen-signin", class = "auth-screen", style = "display:flex;",
       div(class = "auth-card",
         div(class = "auth-logo",
           div(class = "auth-logo-mark", "SL"),
@@ -31,14 +44,18 @@ sl_ui <- function() {
         ),
         div(class = "auth-field",
           tags$label("Email address", class = "sl-form-label"),
-          textInput("signin_email", NULL,
-                    placeholder = "you@example.com", width = "100%")
+          tags$input(id = "signin_email", type = "email",
+                     class = "form-control shiny-bound-input",
+                     placeholder = "you@example.com",
+                     autocomplete = "email",
+                     style = "width:100%;")
         ),
         div(class = "auth-field",
           tags$label("Password", class = "sl-form-label"),
           tags$input(id = "signin_password", type = "password",
-                     class = "form-control",
+                     class = "form-control shiny-bound-input",
                      placeholder = "Your password",
+                     autocomplete = "current-password",
                      style = "width:100%;")
         ),
         div(style = "text-align:right;margin-bottom:20px;",
@@ -65,9 +82,8 @@ sl_ui <- function() {
       )
     ),
 
-    # ══ SCREEN: CREATE ACCOUNT — hidden by default
-    div(id = "screen-register", class = "auth-screen",
-        style = "display:none;",
+    # ══ SCREEN: CREATE ACCOUNT ════════════════════════════════════════════════
+    div(id = "screen-register", class = "auth-screen", style = "display:none;",
       div(class = "auth-card",
         div(class = "auth-logo",
           div(class = "auth-logo-mark", "SL"),
@@ -80,6 +96,7 @@ sl_ui <- function() {
                  onclick = "switchAuth('signin');return false;",
                  "Sign in →")
         ),
+
         div(class = "auth-info-banner",
           span(class = "auth-info-icon", "ℹ"),
           div(
@@ -89,6 +106,7 @@ sl_ui <- function() {
                  "Team members need an invite link sent by the admin.")
           )
         ),
+
         div(style = "display:flex;gap:12px;",
           div(class = "auth-field", style = "flex:1;",
             tags$label("First name", class = "sl-form-label"),
@@ -103,21 +121,26 @@ sl_ui <- function() {
         ),
         div(class = "auth-field",
           tags$label("Email address", class = "sl-form-label"),
-          textInput("reg_email", NULL,
-                    placeholder = "you@example.com", width = "100%")
+          tags$input(id = "reg_email", type = "email",
+                     class = "form-control shiny-bound-input",
+                     placeholder = "you@example.com",
+                     autocomplete = "email",
+                     style = "width:100%;")
         ),
         div(class = "auth-field",
           tags$label("Password", class = "sl-form-label"),
           tags$input(id = "reg_password", type = "password",
-                     class = "form-control",
+                     class = "form-control shiny-bound-input",
                      placeholder = "At least 8 characters",
+                     autocomplete = "new-password",
                      style = "width:100%;")
         ),
         div(class = "auth-field",
           tags$label("Confirm password", class = "sl-form-label"),
           tags$input(id = "reg_password2", type = "password",
-                     class = "form-control",
+                     class = "form-control shiny-bound-input",
                      placeholder = "Repeat your password",
+                     autocomplete = "new-password",
                      style = "width:100%;")
         ),
         actionButton("btn_register", "Create account",
@@ -130,9 +153,8 @@ sl_ui <- function() {
       )
     ),
 
-    # ══ SCREEN: FORGOT PASSWORD — hidden by default
-    div(id = "screen-forgot", class = "auth-screen",
-        style = "display:none;",
+    # ══ SCREEN: FORGOT PASSWORD ═══════════════════════════════════════════════
+    div(id = "screen-forgot", class = "auth-screen", style = "display:none;",
       div(class = "auth-card",
         div(class = "auth-logo",
           div(class = "auth-logo-mark", "SL"),
@@ -156,9 +178,8 @@ sl_ui <- function() {
       )
     ),
 
-    # ══ SCREEN: RESET PASSWORD — hidden by default
-    div(id = "screen-reset", class = "auth-screen",
-        style = "display:none;",
+    # ══ SCREEN: RESET PASSWORD ════════════════════════════════════════════════
+    div(id = "screen-reset", class = "auth-screen", style = "display:none;",
       div(class = "auth-card",
         div(class = "auth-logo",
           div(class = "auth-logo-mark", "SL"),
@@ -185,9 +206,8 @@ sl_ui <- function() {
       )
     ),
 
-    # ══ SCREEN: CHECK EMAIL — hidden by default
-    div(id = "screen-check-email", class = "auth-screen",
-        style = "display:none;",
+    # ══ SCREEN: CHECK EMAIL ═══════════════════════════════════════════════════
+    div(id = "screen-check-email", class = "auth-screen", style = "display:none;",
       div(class = "auth-card", style = "text-align:center;",
         div(style = "font-size:48px;margin-bottom:16px;", "📬"),
         h1(class = "auth-title", "Check your email"),
@@ -200,7 +220,7 @@ sl_ui <- function() {
       )
     ),
 
-    # ══ MAIN APP — hidden until login
+    # ══ MAIN APP ══════════════════════════════════════════════════════════════
     div(id = "main-app", style = "display:none;",
 
       # ── Navbar ──────────────────────────────────────────────────────────
