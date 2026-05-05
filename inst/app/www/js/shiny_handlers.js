@@ -5,18 +5,12 @@
 
 // ── Theme Toggle ─────────────────────────────────────────────────────────────
 function toggleTheme(checkbox) {
-  const isDark = !checkbox.checked;  // unchecked = dark, checked = light
+  const isDark = !checkbox.checked;
   document.body.classList.toggle("light-mode", !isDark);
-
-  // Sync both toggles (login + main navbar)
   document.querySelectorAll("input[type=checkbox][onchange='toggleTheme(this)']")
     .forEach(el => { el.checked = checkbox.checked; });
-
-  // Update label
   const lbl = document.getElementById("theme_label");
   if (lbl) lbl.textContent = isDark ? "Dark mode" : "Light mode";
-
-  // Persist preference
   try { localStorage.setItem("sl_theme", isDark ? "dark" : "light"); } catch(e) {}
 }
 
@@ -26,7 +20,6 @@ function toggleTheme(checkbox) {
     const saved = localStorage.getItem("sl_theme");
     if (saved === "light") {
       document.body.classList.add("light-mode");
-      // Will sync checkboxes after DOM ready
       document.addEventListener("DOMContentLoaded", function() {
         document.querySelectorAll("input[type=checkbox][onchange='toggleTheme(this)']")
           .forEach(el => { el.checked = true; });
@@ -39,26 +32,42 @@ function toggleTheme(checkbox) {
 
 // ── Tab Switching ─────────────────────────────────────────────────────────────
 function switchTab(name) {
-  // Hide all panels
-  document.querySelectorAll(".sl-tab-panel").forEach(el => {
-    el.classList.remove("active");
-  });
-  // Deactivate all tab buttons
-  document.querySelectorAll(".sl-nav-tab").forEach(el => {
-    el.classList.remove("active");
-  });
-
-  // Show target panel
+  document.querySelectorAll(".sl-tab-panel").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".sl-nav-tab").forEach(el => el.classList.remove("active"));
   const panel = document.getElementById("tab-" + name);
   if (panel) panel.classList.add("active");
-
-  // Activate button
   const btn = document.getElementById("tab-btn-" + name);
   if (btn) btn.classList.add("active");
+  if (window.Shiny) Shiny.setInputValue("main_tabs", name, { priority: "event" });
+}
 
-  // Notify R (for dashboard refresh)
-  if (window.Shiny) {
-    Shiny.setInputValue("main_tabs", name, { priority: "event" });
+// ── Auth Screen Switcher ──────────────────────────────────────────────────────
+// Controls all screen transitions using inline display style.
+// 'screen' values: 'signin' | 'register' | 'forgot' | 'reset' | 'check-email' | 'main-app'
+var ALL_AUTH_SCREENS = [
+  "screen-signin",
+  "screen-register",
+  "screen-forgot",
+  "screen-reset",
+  "screen-check-email"
+];
+
+function switchAuth(screen) {
+  // Hide every auth screen
+  ALL_AUTH_SCREENS.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+
+  // Hide main-app (when returning to auth)
+  var mainApp = document.getElementById("main-app");
+  if (mainApp) mainApp.style.display = "none";
+
+  if (screen === "main-app") {
+    if (mainApp) mainApp.style.display = "block";
+  } else {
+    var target = document.getElementById("screen-" + screen);
+    if (target) target.style.display = "flex";
   }
 }
 
@@ -85,77 +94,36 @@ $(document).ready(function() {
     ShinyLabel.setActiveClass(classObj);
   });
 
-  Shiny.addCustomMessageHandler("sl_undo",           function(_) { ShinyLabel.undo(); });
-  Shiny.addCustomMessageHandler("sl_delete_selected",function(_) { ShinyLabel.deleteSelected(); });
-  Shiny.addCustomMessageHandler("sl_clear_boxes",    function(_) { ShinyLabel.clearBoxes(); });
+  Shiny.addCustomMessageHandler("sl_undo",            function(_) { ShinyLabel.undo(); });
+  Shiny.addCustomMessageHandler("sl_delete_selected", function(_) { ShinyLabel.deleteSelected(); });
+  Shiny.addCustomMessageHandler("sl_clear_boxes",     function(_) { ShinyLabel.clearBoxes(); });
 
-  // ── Color picker bridge ────────────────────────────────────────────────────
-  // The native <input type="color"> isn't a Shiny input, so we relay its value
+  // ── Color picker bridge ──────────────────────────────────────────────────
   $(document).on("change input", "#new_class_color", function() {
-    if (window.Shiny) {
-      Shiny.setInputValue("new_class_color_val", this.value, { priority: "event" });
-    }
+    if (window.Shiny) Shiny.setInputValue("new_class_color_val", this.value, { priority: "event" });
   });
 
-  // ── Keyboard navigation ────────────────────────────────────────────────────
+  // ── Keyboard navigation ──────────────────────────────────────────────────
   $(document).on("keydown", function(e) {
     const tag = e.target.tagName.toLowerCase();
     if (tag === "input" || tag === "textarea" || tag === "select") return;
-
     if (e.key === "ArrowRight") $("#btn_next").click();
     if (e.key === "ArrowLeft")  $("#btn_prev").click();
   });
 
   // ── Export download trigger ──────────────────────────────────────────────
-  // Creates a hidden <a> and clicks it — works in all browsers
-  // bypasses Shiny downloadHandler which produces download.htm in some setups
   Shiny.addCustomMessageHandler("sl_trigger_download", function(msg) {
     var a = document.createElement("a");
-    a.href     = msg.url;
-    a.download = msg.filename;
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
+    a.href = msg.url; a.download = msg.filename; a.style.display = "none";
+    document.body.appendChild(a); a.click();
     setTimeout(function() { document.body.removeChild(a); }, 1000);
   });
+
   Shiny.addCustomMessageHandler("sl_toast", function(msg) {
     const toast = $('<div style="position:fixed;bottom:24px;right:24px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:6px;padding:12px 18px;font-family:var(--font-mono);font-size:13px;color:var(--text-primary);box-shadow:var(--shadow-lg);z-index:9999;">'
       + msg.text + '</div>');
     $("body").append(toast);
-    setTimeout(function() {
-      toast.fadeOut(300, function() { $(this).remove(); });
-    }, msg.duration || 2000);
+    setTimeout(function() { toast.fadeOut(300, function() { $(this).remove(); }); }, msg.duration || 2000);
   });
 
 });
-
-// ── Auth screen switcher ────────────────────────────────────────────────────
-// Handles all auth screen transitions. 'screen' can be:
-//   'signin' | 'register' | 'forgot' | 'reset' | 'check-email' | 'main-app'
-var ALL_AUTH_SCREENS = [
-  "screen-signin",
-  "screen-register",
-  "screen-forgot",
-  "screen-reset",
-  "screen-check-email"
-];
-
-function switchAuth(screen) {
-  // Hide all auth screens
-  ALL_AUTH_SCREENS.forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.classList.remove("auth-screen-active");
-  });
-
-  // Hide main-app too (in case we're going back to auth)
-  var mainApp = document.getElementById("main-app");
-  if (mainApp) mainApp.style.display = "none";
-
-  if (screen === "main-app") {
-    if (mainApp) mainApp.style.display = "block";
-  } else {
-    var targetId = "screen-" + screen;
-    var target = document.getElementById(targetId);
-    if (target) target.classList.add("auth-screen-active");
-  }
-}
