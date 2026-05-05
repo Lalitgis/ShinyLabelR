@@ -129,28 +129,16 @@ $(document).ready(function() {
 
 });
 
-// ── Auth screen switcher ─────────────────────────────────────────────────────
-// Controls ALL screen transitions via direct element.style.display
-// 'screen' values: 'signin'|'register'|'forgot'|'reset'|'check-email'|'main-app'
-var ALL_AUTH_SCREENS = [
-  "screen-signin", "screen-register", "screen-forgot",
-  "screen-reset",  "screen-check-email"
-];
-
+// ── Screen switcher ──────────────────────────────────────────────────────────
+// Hides the name entry screen and shows the main app (or vice versa)
 function switchAuth(screen) {
-  // Hide all auth screens
-  ALL_AUTH_SCREENS.forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.style.display = "none";
-  });
-  // Hide main-app
-  var mainApp = document.getElementById("main-app");
-  if (mainApp) mainApp.style.display = "none";
-
+  var nameScreen = document.getElementById("screen-name");
+  var mainApp    = document.getElementById("main-app");
   if (screen === "main-app") {
-    if (mainApp) mainApp.style.display = "block";
+    if (nameScreen) nameScreen.style.display = "none";
+    if (mainApp)    mainApp.style.display    = "block";
   } else {
-    var target = document.getElementById("screen-" + screen);
-    if (target) target.style.display = "flex";
+    if (mainApp)    mainApp.style.display    = "none";
+    if (nameScreen) nameScreen.style.display = "flex";
   }
 }
