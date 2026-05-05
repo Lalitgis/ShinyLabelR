@@ -1002,28 +1002,26 @@ table.dataTable tbody tr:hover { background: var(--bg-hover) !important; }
 
 /* ══ AUTH SCREEN — MISSING FROM LIVE REPO — centered full viewport ══════════ */
 .auth-screen {
-  position:        fixed;
-  inset:           0;
-  top:             0;
-  left:            0;
-  right:           0;
-  bottom:          0;
-  width:           100vw;
-  height:          100vh;
-  /* NO display rule here — controlled by inline style= in ui.R and switchAuth() in JS */
-  align-items:     center;
-  justify-content: center;
+  position:        fixed !important;
+  inset:           0 !important;
+  top:             0 !important;
+  left:            0 !important;
+  right:           0 !important;
+  bottom:          0 !important;
+  width:           100vw !important;
+  height:          100vh !important;
+  /* display controlled by inline style in ui.R */
+  align-items:     center !important;
+  justify-content: center !important;
   background:      var(--bg-deep);
   z-index:         9999;
-  margin:          0;
-  padding:         0;
+  margin:          0 !important;
+  padding:         0 !important;
   background-image: radial-gradient(ellipse 80% 60% at 50% -20%,
                     rgba(79,142,247,0.08) 0%, transparent 70%);
 }
 
-/* Note: auth screen visibility is controlled via inline styles in ui.R + switchAuth() in JS */
-
-
+/* password input styling */
 input[type="password"].form-control {
   background:    var(--bg-deep) !important;
   border:        1px solid var(--border) !important;
