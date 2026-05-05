@@ -13,22 +13,25 @@ sl_ui <- function() {
       tags$script(src = "js/shiny_handlers.js"),
       tags$title("ShinyLabelR — R Annotation Tool"),
 
-      # Enter key submits the visible auth form
+      # Enter key submits the active auth form
       tags$script(HTML("
         document.addEventListener('keydown', function(e) {
           if (e.key !== 'Enter') return;
-          var active = document.querySelector('.auth-screen[style*=\"flex\"]');
-          if (!active) return;
-          var id = active.id;
-          if (id === 'screen-signin')   document.getElementById('btn_signin').click();
-          if (id === 'screen-register') document.getElementById('btn_register').click();
-          if (id === 'screen-forgot')   document.getElementById('btn_forgot').click();
+          var screens = ['screen-signin','screen-register','screen-forgot'];
+          var btns    = ['btn_signin',   'btn_register',   'btn_forgot'];
+          for (var i = 0; i < screens.length; i++) {
+            var el = document.getElementById(screens[i]);
+            if (el && el.style.display !== 'none' && el.style.display !== '') {
+              var btn = document.getElementById(btns[i]);
+              if (btn) btn.click();
+              break;
+            }
+          }
         });
       "))
     ),
 
     # ══ SCREEN: SIGN IN ═══════════════════════════════════════════════════════
-    # style=display:flex makes this visible immediately — no CSS/JS race
     div(id = "screen-signin", class = "auth-screen", style = "display:flex;",
       div(class = "auth-card",
         div(class = "auth-logo",
