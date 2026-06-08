@@ -1,7 +1,3 @@
-library(shiny)
-library(bslib)
-library(shinyjs)
-
 #' ShinyLabel UI
 #' @export
 sl_ui <- function() {
