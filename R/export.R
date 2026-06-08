@@ -118,6 +118,16 @@ sl_export_yolo <- function(con, output_dir = tempdir(), split_ratio = 0.8) {
 
   zipped <- FALSE
 
+  # Helper: run zip_fn() from root_dir, restore wd regardless of success/failure.
+  # Using a wrapper function gives each call its own on.exit frame, so the
+  # restore never touches handlers registered in the outer sl_export_yolo frame.
+  with_wd <- function(dir, zip_fn) {
+    old <- getwd()
+    on.exit(setwd(old), add = FALSE)   # scoped to THIS helper frame only
+    setwd(dir)
+    zip_fn()
+  }
+
   # ── Attempt 1: zip::zip with root= (zip >= 2.2.0) ─────────────────────────
   if (!zipped && requireNamespace("zip", quietly = TRUE)) {
     tryCatch({
@@ -125,13 +135,10 @@ sl_export_yolo <- function(con, output_dir = tempdir(), split_ratio = 0.8) {
         zip::zip(zipfile = zip_abs, files = "yolo_dataset",
                  recurse = TRUE, root = root_dir)
       } else {
-        # Older zip package: no root param, use setwd temporarily
-        old_wd <- getwd()
-        on.exit(setwd(old_wd), add = TRUE)
-        setwd(root_dir)
-        zip::zip(zipfile = zip_name, files = "yolo_dataset", recurse = TRUE)
-        setwd(old_wd)
-        on.exit(NULL)
+        # Older zip package: no root param — use scoped wd helper
+        with_wd(root_dir, function() {
+          zip::zip(zipfile = zip_name, files = "yolo_dataset", recurse = TRUE)
+        })
       }
       zipped <- valid_zip(zip_abs)
     }, error = function(e) {
@@ -141,14 +148,12 @@ sl_export_yolo <- function(con, output_dir = tempdir(), split_ratio = 0.8) {
 
   # ── Attempt 2: utils::zip (base R, calls system zip binary) ───────────────
   if (!zipped) {
-    old_wd2 <- getwd()
     tryCatch({
-      setwd(root_dir)
-      utils::zip(zipfile = zip_name, files = "yolo_dataset")
-      setwd(old_wd2)
+      with_wd(root_dir, function() {
+        utils::zip(zipfile = zip_name, files = "yolo_dataset")
+      })
       zipped <- valid_zip(zip_abs)
     }, error = function(e) {
-      try(setwd(old_wd2), silent = TRUE)
       message("[ShinyLabel] utils::zip attempt failed: ", e$message)
     })
   }
