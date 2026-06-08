@@ -25,7 +25,6 @@ Imports:
     DT (>= 0.27),
     zip (>= 2.3.0),
     base64enc,
-    fs,
     tools,
     httr2,
     digest
