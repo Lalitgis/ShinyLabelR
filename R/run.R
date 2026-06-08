@@ -26,13 +26,29 @@ run_shinylabel <- function(
     port           = NULL,
     launch.browser = TRUE
 ) {
-  # Add www/ folder to resource path so CSS/JS are served
-  www_dir <- system.file("www", package = "shinylabel")
-  if (!nzchar(www_dir)) {
-    # Development mode: use local path
-    www_dir <- file.path(dirname(dirname(system.file(package = "shinylabel"))),
-                         "shinylabel", "www")
+  # Add www/ folder to resource path so CSS/JS are served.
+  #
+  # When installed: inst/app/www is placed at <pkg_root>/app/www by R's
+  # installation process.  system.file("app", "www") finds it correctly in
+  # both fully-installed and devtools::load_all() scenarios.
+  #
+  # The old code used system.file("www") which looked for <pkg_root>/www —
+  # a path that does not exist — and always returned "".
+  www_dir <- system.file("app", "www", package = "shinylabel")
+
+  if (!nzchar(www_dir) || !dir.exists(www_dir)) {
+    # Last-resort: running directly from the source tree (e.g. shiny::runApp())
+    www_dir <- file.path(
+      normalizePath(system.file(package = "shinylabel"), mustWork = FALSE),
+      "app", "www")
   }
+
+  if (!dir.exists(www_dir))
+    stop(
+      "[shinylabel] Cannot locate the www/ directory at: ", www_dir, "\n",
+      "Try reinstalling with:  devtools::install('.')"
+    )
+
   shiny::addResourcePath("css", file.path(www_dir, "css"))
   shiny::addResourcePath("js",  file.path(www_dir, "js"))
   shiny::addResourcePath("img", file.path(www_dir, "img"))
