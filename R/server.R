@@ -106,21 +106,23 @@ sl_server <- function(db_path = "shinylabel.db") {
 
     observeEvent(input$btn_load_upload, {
       req(input$file_upload)
-      files <- input$file_upload; added <- 0L; dest_d <- img_dest_dir()
+      files <- input$file_upload; added <- 0L; skipped <- 0L; dest_d <- img_dest_dir()
       withProgress(message = "Loading images…", value = 0, {
         for (i in seq_len(nrow(files))) {
           info <- sl_image_info(files$datapath[i])
           if (info$width == 0L) next
           dest <- file.path(dest_d, files$name[i])
-          file.copy(files$datapath[i], dest, overwrite = FALSE)
+          copied <- file.copy(files$datapath[i], dest, overwrite = FALSE)
           sl_add_image(con, dest, files$name[i],
                        info$width, info$height, "upload", rv$annotator)
-          added <- added + 1L
+          if (copied) added <- added + 1L else skipped <- skipped + 1L
           incProgress(1 / nrow(files))
         }
       })
       rv$images <- sl_get_images(con)
-      showNotification(paste0("Loaded ", added, " image(s)"), type = "message")
+      msg <- paste0("Loaded ", added, " new image(s)")
+      if (skipped > 0L) msg <- paste0(msg, " (", skipped, " already existed, skipped)")
+      showNotification(msg, type = "message")
       if (nrow(rv$images) > 0L && rv$current_idx == 0L) navigate_to(1L)
     })
 
@@ -217,17 +219,35 @@ sl_server <- function(db_path = "shinylabel.db") {
         sl_save_annotations(con, img_id, NULL, rv$annotator)
       } else {
         box_df <- do.call(rbind, lapply(boxes_raw, function(b) {
-          norm <- px_to_yolo_norm(
-            as.numeric(b[["x_pixel"]]), as.numeric(b[["y_pixel"]]),
-            as.numeric(b[["w_pixel"]]), as.numeric(b[["h_pixel"]]),
-            img_w, img_h)
+          # canvas.js reportBoxes() already sends x_center_norm/y_center_norm/w_norm/h_norm
+          # computed from the unrounded float pixel positions.  Use those directly rather
+          # than recomputing from the rounded integer x_pixel/w_pixel values, which would
+          # introduce a small but real precision loss in the stored normalised coordinates.
+          # Fall back to px_to_yolo_norm only if the canvas values are missing or invalid.
+          cn <- as.numeric(b[["x_center_norm"]])
+          use_canvas_norm <- !is.na(cn) && img_w > 0L && img_h > 0L
+          if (use_canvas_norm) {
+            x_center_norm <- cn
+            y_center_norm <- as.numeric(b[["y_center_norm"]])
+            w_norm        <- as.numeric(b[["w_norm"]])
+            h_norm        <- as.numeric(b[["h_norm"]])
+          } else {
+            norm          <- px_to_yolo_norm(
+              as.numeric(b[["x_pixel"]]), as.numeric(b[["y_pixel"]]),
+              as.numeric(b[["w_pixel"]]), as.numeric(b[["h_pixel"]]),
+              img_w, img_h)
+            x_center_norm <- norm$x_center_norm
+            y_center_norm <- norm$y_center_norm
+            w_norm        <- norm$w_norm
+            h_norm        <- norm$h_norm
+          }
           data.frame(
             class_id=as.integer(b[["class_id"]]),
             class_name=as.character(b[["class_name"]]),
             x_pixel=as.numeric(b[["x_pixel"]]), y_pixel=as.numeric(b[["y_pixel"]]),
             w_pixel=as.numeric(b[["w_pixel"]]), h_pixel=as.numeric(b[["h_pixel"]]),
-            x_center_norm=norm$x_center_norm, y_center_norm=norm$y_center_norm,
-            w_norm=norm$w_norm, h_norm=norm$h_norm,
+            x_center_norm=x_center_norm, y_center_norm=y_center_norm,
+            w_norm=w_norm, h_norm=h_norm,
             stringsAsFactors=FALSE)
         }))
         sl_save_annotations(con, img_id, box_df, rv$annotator)
