@@ -184,7 +184,7 @@ print(stats$totals)
 
 ## Related
 
-- **[yoloR](https://github.com/Lalitgis/yoloR)** — train YOLO models from R
+- **[yoloR](https://github.com/Lalitgis/yoloR)** — train YOLO models from R from scratch
 
 ## License
 
